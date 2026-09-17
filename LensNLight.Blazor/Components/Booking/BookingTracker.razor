@@ -1,0 +1,32 @@
+<section class="tracking-card" aria-labelledby="booking-details-title">
+    <header>
+        <div>
+            <span class="card-eyebrow">Current reservation</span>
+            <h2 id="booking-details-title">Booking Details</h2>
+        </div>
+        <strong>@Result.BookingNumber</strong>
+    </header>
+    <div class="tracking-grid">
+        <div><p>Renter's Name</p><span>@Result.RenterName</span></div>
+        <div><p>Item Rented</p><span>@Result.ItemName</span></div>
+        <div><p>Rental Date</p><span>@Result.StartAt.ToString("MMM d, yyyy") – @Result.EndAt.ToString("MMM d, yyyy")</span></div>
+        <div><p>Mode of Delivery</p><span>@Result.DeliveryMode</span></div>
+        <div><p>Duration</p><span>@Result.Duration</span></div>
+        <div><p>Status</p><span class="tracking-status">@Result.Status</span></div>
+    </div>
+    <ol class="tracking-timeline" aria-label="Booking status">
+        @for (var index = 0; index < Result.Steps.Count; index++)
+        {
+            var step = Result.Steps[index];
+            <li class="@step.State.ToString().ToLowerInvariant()">
+                <span aria-hidden="true">@(step.State == BookingStepState.Complete ? "✓" : (index + 1).ToString())</span>
+                <strong>@step.Label</strong>
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public required BookingTrackingResult Result { get; set; }
+}

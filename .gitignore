@@ -1,0 +1,9 @@
+.dotnet/
+.dotnet-home/
+.data-protection/
+**/.data-protection/
+**/bin/
+**/obj/
+.DS_Store
+artifacts/
+screenshots/

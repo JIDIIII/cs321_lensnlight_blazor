@@ -1,0 +1,96 @@
+@page "/"
+@page "/cameras"
+@inject ICameraCatalogService Catalog
+
+<PageTitle>LENS N' LIGHT Camera Rental</PageTitle>
+
+<div class="customer-page homepage">
+    <div class="home-visual">
+        <SiteHeader />
+        <main id="main-content">
+            <section class="home-hero" aria-labelledby="home-title">
+                <div class="hero-copy">
+                    <p class="eyebrow">Camera rental</p>
+                    <h1 id="home-title">The right camera for your next frame.</h1>
+                    <p class="hero-summary">Compare daily rates and reserve the camera that fits your next shoot.</p>
+                    <div class="hero-actions">
+                        <a class="primary-action" href="#rental-catalog">
+                            Browse cameras
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                        <a class="secondary-action" href="/track-booking">Track booking</a>
+                    </div>
+                </div>
+                @if (Featured is not null)
+                {
+                    <FeaturedCamera Item="Featured" />
+                }
+            </section>
+
+            <section class="quick-search" aria-labelledby="find-camera-title">
+                <div>
+                    <h2 id="find-camera-title">Find your camera</h2>
+                    <p>Search by model or category.</p>
+                </div>
+                <form class="search-field" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                    <label class="sr-only" for="camera-search">Search cameras</label>
+                    <input id="camera-search"
+                           type="search"
+                           placeholder="Try “Canon” or “Cameras”…"
+                           autocomplete="off"
+                           @bind="SearchQuery"
+                           @bind:event="oninput" />
+                    <button type="submit">Search</button>
+                </form>
+            </section>
+
+            <section class="catalog-section" id="rental-catalog" aria-labelledby="catalog-title">
+                <div class="catalog-heading">
+                    <p class="eyebrow">Current collection</p>
+                    <h2 id="catalog-title">Browse rental items</h2>
+                    <p>View current status, compare rental tiers, and open any camera for complete details.</p>
+                </div>
+                @if (FilteredItems.Count > 0)
+                {
+                    <div class="camera-grid">
+                        @foreach (var item in FilteredItems)
+                        {
+                            <CameraCard Item="item" @key="item.Id" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <span aria-hidden="true">◎</span>
+                        <h3>No matching rental items</h3>
+                        <p>Try another model, brand, or category.</p>
+                        <button type="button" @onclick="ClearSearch">Clear search</button>
+                    </div>
+                }
+            </section>
+        </main>
+    </div>
+    <SiteFooter />
+</div>
+
+@code {
+    private string SearchQuery { get; set; } = string.Empty;
+    private CameraItem? Featured { get; set; }
+    private IReadOnlyList<CameraItem> FilteredItems { get; set; } = [];
+
+    protected override void OnInitialized()
+    {
+        Featured = Catalog.GetFeatured();
+        FilteredItems = Catalog.GetAll();
+    }
+
+    private void ApplySearch() => FilteredItems = Catalog.Search(SearchQuery);
+
+    private void ClearSearch()
+    {
+        SearchQuery = string.Empty;
+        FilteredItems = Catalog.GetAll();
+    }
+}

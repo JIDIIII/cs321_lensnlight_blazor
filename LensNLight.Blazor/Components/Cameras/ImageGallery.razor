@@ -1,0 +1,54 @@
+<section class="image-gallery" aria-label="@Item.Name image gallery">
+    <div class="gallery-stage">
+        @if (Item.Images.Count == 0 || FailedImages.Contains(ActiveIndex))
+        {
+            <div class="camera-fallback" role="img" aria-label="@Item.Name image unavailable">
+                <span aria-hidden="true">◎</span>
+                <small>Image temporarily unavailable</small>
+            </div>
+        }
+        else
+        {
+            <img src="@Item.Images[ActiveIndex].Url"
+                 alt="@Item.Images[ActiveIndex].Alt"
+                 @onerror="() => MarkFailed(ActiveIndex)" />
+        }
+
+        @if (Item.Images.Count > 1)
+        {
+            <button class="gallery-arrow previous" type="button" @onclick="ShowPrevious" aria-label="Previous image">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            <button class="gallery-arrow next" type="button" @onclick="ShowNext" aria-label="Next image">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+        }
+        <span class="gallery-hint">Tap arrows to view the gallery</span>
+        @if (Item.Images.Count > 0)
+        {
+            <div class="gallery-dots" aria-label="Image @(ActiveIndex + 1) of @Item.Images.Count">
+                @for (var index = 0; index < Item.Images.Count; index++)
+                {
+                    var imageIndex = index;
+                    <button class="@(imageIndex == ActiveIndex ? "active" : null)"
+                            type="button"
+                            @onclick="() => Select(imageIndex)"
+                            aria-label="Show image @(imageIndex + 1)"></button>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private int ActiveIndex { get; set; }
+    private HashSet<int> FailedImages { get; } = [];
+
+    [Parameter, EditorRequired]
+    public required CameraItem Item { get; set; }
+
+    private void ShowPrevious() => ActiveIndex = ActiveIndex == 0 ? Item.Images.Count - 1 : ActiveIndex - 1;
+    private void ShowNext() => ActiveIndex = (ActiveIndex + 1) % Item.Images.Count;
+    private void Select(int index) => ActiveIndex = index;
+    private void MarkFailed(int index) => FailedImages.Add(index);
+}

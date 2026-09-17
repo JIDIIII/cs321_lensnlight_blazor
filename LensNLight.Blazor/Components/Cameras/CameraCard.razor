@@ -1,0 +1,51 @@
+<article class="camera-card">
+    <a class="camera-card-link" href="/cameras/@Item.Slug" aria-label="View @Item.Name details">
+        <div class="camera-card-media">
+            @if (Item.Images.Count > 0 && !ImageFailed)
+            {
+                <img src="@Item.Images[0].Url" alt="@Item.Images[0].Alt" @onerror="MarkImageFailed" />
+            }
+            else
+            {
+                <div class="camera-fallback" role="img" aria-label="@Item.Name image unavailable">
+                    <span aria-hidden="true">◎</span>
+                    <small>Image temporarily unavailable</small>
+                </div>
+            }
+            <span class="media-hint">View details</span>
+        </div>
+        <div class="camera-card-body">
+            <div class="camera-card-main">
+                <div>
+                    <h3>@Item.Name</h3>
+                    <p>@Item.Category.ToUpperInvariant()</p>
+                    @if (Item.PricingTiers.Count >= 3)
+                    {
+                        <span class="rate-pill">
+                            @Item.PricingTiers[1].Label ₱@Item.PricingTiers[1].DailyRate.ToString("N0")/day,
+                            @Item.PricingTiers[2].Label ₱@Item.PricingTiers[2].DailyRate.ToString("N0")/day
+                        </span>
+                    }
+                </div>
+                <div class="daily-rate">
+                    <StatusBadge Status="Item.Status" />
+                    <span>Daily Rate</span>
+                    <strong>₱@Item.StartingPrice.ToString("N0")</strong>
+                </div>
+            </div>
+            <span class="card-cta">
+                View details
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </span>
+        </div>
+    </a>
+</article>
+
+@code {
+    private bool ImageFailed { get; set; }
+
+    [Parameter, EditorRequired]
+    public required CameraItem Item { get; set; }
+
+    private void MarkImageFailed() => ImageFailed = true;
+}

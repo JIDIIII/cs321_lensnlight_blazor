@@ -1,0 +1,9 @@
+<span class="status-badge @Status.ToString().ToLowerInvariant()">
+    <span class="status-dot" aria-hidden="true"></span>
+    @Status
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public CameraAvailability Status { get; set; }
+}

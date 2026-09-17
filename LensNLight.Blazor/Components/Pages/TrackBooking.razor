@@ -1,0 +1,79 @@
+@page "/track-booking"
+@page "/track"
+@inject IBookingTrackingService TrackingService
+
+<PageTitle>Track Booking | LENS N' LIGHT</PageTitle>
+
+<div class="customer-page tracking-page">
+    <SiteHeader />
+    <main class="tracking-frame" id="main-content">
+        <section class="tracking-hero" aria-labelledby="tracking-title">
+            <div>
+                <p class="eyebrow">Reservation status</p>
+                <h1 id="tracking-title">Track Your Booking</h1>
+                <p>Enter your Booking Number below to quickly check your reservation status and booking details.</p>
+            </div>
+            <aside>
+                <span>Demo access</span>
+                <strong>LNL-DEMO-001</strong>
+                <p>No production booking data is queried.</p>
+            </aside>
+        </section>
+
+        <form class="tracking-search search-field" @onsubmit="ExecuteLookup" @onsubmit:preventDefault>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <label class="sr-only" for="booking-number">Booking number</label>
+            <input id="booking-number"
+                   type="search"
+                   placeholder="Enter booking number, for example LNL-DEMO-001"
+                   autocomplete="off"
+                   @bind="BookingNumber"
+                   @bind:event="oninput" />
+            <button type="submit">Track</button>
+        </form>
+
+        @if (LookupAttempted && Result is null)
+        {
+            <div class="lookup-message error" role="alert">
+                <strong>Booking not found</strong>
+                <p>Check the number and try again. For this prototype, use <button type="button" @onclick="UseDemoNumber">LNL-DEMO-001</button>.</p>
+            </div>
+        }
+
+        @if (Result is not null)
+        {
+            <BookingTracker Result="Result" />
+        }
+        else if (!LookupAttempted)
+        {
+            <section class="tracking-placeholder" aria-label="How booking tracking works">
+                <div class="placeholder-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M5 12.5 9 16l10-10"/></svg>
+                </div>
+                <div>
+                    <h2>Your rental journey, at a glance.</h2>
+                    <p>The tracker mirrors the current five-stage flow: Pending, Booked, Picked Up or Delivered, In Use, and Returned.</p>
+                </div>
+            </section>
+        }
+    </main>
+    <SiteFooter />
+</div>
+
+@code {
+    private string BookingNumber { get; set; } = string.Empty;
+    private bool LookupAttempted { get; set; }
+    private BookingTrackingResult? Result { get; set; }
+
+    private void ExecuteLookup()
+    {
+        LookupAttempted = true;
+        Result = TrackingService.Find(BookingNumber);
+    }
+
+    private void UseDemoNumber()
+    {
+        BookingNumber = "LNL-DEMO-001";
+        ExecuteLookup();
+    }
+}

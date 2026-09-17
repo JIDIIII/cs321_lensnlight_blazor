@@ -1,0 +1,28 @@
+<a class="featured-camera" href="/cameras/@Item.Slug" aria-label="View @Item.Name details">
+    <div class="featured-media">
+        @if (Item.Images.Count > 0)
+        {
+            <img src="@Item.Images[0].Url" alt="@Item.Images[0].Alt" />
+        }
+        else
+        {
+            <div class="camera-fallback" role="img" aria-label="Camera image unavailable">
+                <span aria-hidden="true">◎</span>
+                <small>Camera image unavailable</small>
+            </div>
+        }
+    </div>
+    <div class="featured-caption">
+        <span class="featured-kicker">Featured camera</span>
+        <strong>@Item.Name</strong>
+        <div class="featured-price">
+            <StatusBadge Status="Item.Status" />
+            <span>From ₱@Item.StartingPrice.ToString("N0") per day</span>
+        </div>
+    </div>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public required CameraItem Item { get; set; }
+}

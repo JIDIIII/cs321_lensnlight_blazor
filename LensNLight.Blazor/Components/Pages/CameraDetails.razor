@@ -1,0 +1,121 @@
+@page "/cameras/{Slug}"
+@page "/items/{Slug}"
+@inject ICameraCatalogService Catalog
+
+<PageTitle>@(Item is null ? "Camera Not Found" : Item.Name) | LENS N' LIGHT</PageTitle>
+
+<div class="customer-page detail-page">
+    <SiteHeader />
+    <main class="detail-frame" id="main-content">
+        @if (Item is null)
+        {
+            <section class="inline-not-found">
+                <p class="eyebrow">Camera not found</p>
+                <h1>This camera is not in the local catalog.</h1>
+                <p>Check the address or return to the current collection.</p>
+                <a class="primary-action" href="/#rental-catalog">Browse cameras</a>
+            </section>
+        }
+        else
+        {
+            <nav class="breadcrumbs" aria-label="Breadcrumb">
+                <a href="/">Home</a>
+                <span aria-hidden="true">/</span>
+                <a href="/#rental-catalog">Cameras</a>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">@Item.Model</span>
+            </nav>
+            <article class="detail-card">
+                <ImageGallery Item="Item" />
+                <div class="detail-panel">
+                    <header class="detail-header">
+                        <div>
+                            <p class="eyebrow">@Item.Category</p>
+                            <h1>@Item.Name</h1>
+                        </div>
+                        <div class="detail-rate">
+                            <StatusBadge Status="Item.Status" />
+                            <span>Daily Rate</span>
+                            <strong>₱@Item.StartingPrice.ToString("N0")</strong>
+                        </div>
+                    </header>
+
+                    <div class="tier-row" aria-label="Rental pricing">
+                        @foreach (var tier in Item.PricingTiers)
+                        {
+                            <div>
+                                <span>@tier.Label</span>
+                                <strong>₱@tier.DailyRate.ToString("N0")<small>/day</small></strong>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="detail-scroll">
+                        <section>
+                            <h2>Description</h2>
+                            <p>@Item.Description</p>
+                        </section>
+                        <section>
+                            <h2>Specifications</h2>
+                            <dl class="spec-grid">
+                                @foreach (var specification in Item.Specifications)
+                                {
+                                    <div><dt>@specification.Key</dt><dd>@specification.Value</dd></div>
+                                }
+                            </dl>
+                        </section>
+                        <section>
+                            <h2>Key Features</h2>
+                            <ul class="feature-list">
+                                @foreach (var feature in Item.Features)
+                                {
+                                    <li>@feature</li>
+                                }
+                            </ul>
+                        </section>
+                        <section>
+                            <h2>Inclusion</h2>
+                            <ul class="inclusion-list">
+                                @foreach (var accessory in Item.Accessories)
+                                {
+                                    <li>@accessory</li>
+                                }
+                            </ul>
+                        </section>
+                    </div>
+
+                    <footer class="detail-footer">
+                        <div>
+                            <span>Security deposit</span>
+                            <strong>₱@Item.SecurityDeposit.ToString("N0")</strong>
+                        </div>
+                        <button class="book-action" type="button" disabled="@(Item.Status == CameraAvailability.Unavailable)" @onclick="ShowBookingNotice">
+                            @(Item.Status == CameraAvailability.Unavailable ? "Unavailable" : "Book Now")
+                        </button>
+                    </footer>
+                    @if (ShowPrototypeNotice)
+                    {
+                        <p class="prototype-notice" role="status">Booking submission is intentionally deferred to a later migration phase.</p>
+                    }
+                </div>
+            </article>
+        }
+    </main>
+    <SiteFooter />
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private CameraItem? Item { get; set; }
+    private bool ShowPrototypeNotice { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Item = Catalog.GetBySlug(Slug);
+        ShowPrototypeNotice = false;
+    }
+
+    private void ShowBookingNotice() => ShowPrototypeNotice = true;
+}
