@@ -1,24 +1,163 @@
 @namespace LensNLight.Blazor.Features.Admin.Pages
 @page "/admin/settings"
+@inject FrontendPreviewSettings PreviewSettings
 
 <PageTitle>Settings · Admin · LENS N' LIGHT</PageTitle>
 <AdminShell Active="settings" Title="Settings" Description="Manage payment methods and system-wide rental configuration.">
     <section class="admin-panel settings-panel">
         <div class="panel-heading"><div><h2>Featured camera</h2><p>Choose the camera shown in the homepage feature.</p></div><span class="admin-eyebrow">HOMEPAGE</span></div>
-        <label>Featured item<select><option>Canon EOS R50</option><option>Panasonic Lumix TZ99</option></select></label>
+        <label>Featured item<select @bind="FeaturedItem"><option value="canon-eos-r50">Canon EOS R50</option><option value="panasonic-lumix-tz99">Panasonic Lumix TZ99</option></select></label>
         <hr />
         <div class="panel-heading"><div><h2>Booking configuration</h2><p>Set default timing and customer experience options.</p></div></div>
-        <div class="field-grid"><label>Default booking buffer<select><option>2 hours</option><option>4 hours</option></select></label><label>Minimum rental period<select><option>1 day</option><option>2 days</option></select></label><label>Business name<input value="LENS N' LIGHT Camera Rental" /></label><label>Customer support email<input type="email" placeholder="support@example.com" /></label></div>
-        <button class="admin-button gold" type="button">Save configuration preview</button>
+        <div class="field-grid">
+            <label>Default booking buffer<select @bind="BookingBuffer"><option>2 hours</option><option>4 hours</option></select></label>
+            <label>Minimum rental period<select @bind="MinimumRental"><option>1 day</option><option>2 days</option></select></label>
+            <label>Business name<input @bind="BusinessName" /></label>
+            <label>Customer support email<input type="email" @bind="SupportEmail" placeholder="support@example.com" /></label>
+        </div>
+        <button class="admin-button gold" type="button" @onclick="SaveConfiguration">Save configuration preview</button>
+        @if (!string.IsNullOrWhiteSpace(Feedback)) { <p class="interaction-message success" role="status">@Feedback</p> }
     </section>
+
     <section class="admin-panel settings-panel">
-        <div class="panel-heading"><div><h2>Payment methods</h2><p>Customer payment options and payment instructions.</p></div><button class="admin-button gold" type="button">+ Add method</button></div>
-        <div class="method-row"><span class="method-mark">G</span><div><strong>GCash</strong><small>0917 123 4567 · LENS N' LIGHT Camera Rental</small></div><span class="status-chip active">Active</span><button type="button">Edit</button></div>
-        <div class="method-row"><span class="method-mark">B</span><div><strong>Bank transfer</strong><small>BDO · 0123 456 789</small></div><span class="status-chip active">Active</span><button type="button">Edit</button></div>
+        <div class="panel-heading"><div><h2>Payment methods</h2><p>Customer payment options and payment instructions.</p></div><button class="admin-button gold" type="button" @onclick="StartAddingPaymentMethod">+ Add method</button></div>
+        @foreach (var method in PreviewSettings.PaymentMethods)
+        {
+            <div class="method-row" @key="method.Id">
+                <span class="method-mark">@method.Name[..1].ToUpperInvariant()</span>
+                <div><strong>@method.Name</strong><small>@method.Details</small></div>
+                <span class="status-chip active">Active</span>
+                <button type="button" @onclick="() => EditPaymentMethod(method)">Edit</button>
+            </div>
+        }
+        @if (IsPaymentEditorOpen)
+        {
+            <div class="payment-method-editor">
+                <h3>@(IsAddingPaymentMethod ? "Add payment method" : "Edit payment method")</h3>
+                <div class="field-grid">
+                    <label>Method name<input @bind="PaymentMethodName" placeholder="e.g. GCash" /></label>
+                    <label>Account or instructions<input @bind="PaymentMethodDetails" placeholder="Account number · Account name" /></label>
+                </div>
+                <div class="flow-actions">
+                    <button class="secondary-action" type="button" @onclick="CancelPaymentMethodEdit">Cancel</button>
+                    <button class="admin-button gold" type="button" @onclick="SavePaymentMethod">Save method preview</button>
+                </div>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(PaymentFeedback)) { <p class="interaction-message success" role="status">@PaymentFeedback</p> }
     </section>
+
     <section class="admin-panel settings-panel">
         <div><h2>Rental terms &amp; conditions</h2><p>Preview the terms shown during booking review.</p></div>
-        <textarea rows="7">Please handle all equipment with care. Return equipment and listed accessories at the agreed date and time. A security deposit is collected for each rental and returned after inspection.</textarea>
-        <button class="admin-button gold" type="button">Save terms preview</button>
+        <textarea rows="7" @bind="RentalTerms"></textarea>
+        <button class="admin-button gold" type="button" @onclick="SaveTerms">Save terms preview</button>
+        @if (!string.IsNullOrWhiteSpace(TermsFeedback)) { <p class="interaction-message success" role="status">@TermsFeedback</p> }
     </section>
 </AdminShell>
+
+@code {
+    private string FeaturedItem { get; set; } = "Canon EOS R50";
+    private string BookingBuffer { get; set; } = "2 hours";
+    private string MinimumRental { get; set; } = "1 day";
+    private string BusinessName { get; set; } = "LENS N' LIGHT Camera Rental";
+    private string SupportEmail { get; set; } = string.Empty;
+    private string RentalTerms { get; set; } = "Please handle all equipment with care. Return equipment and listed accessories at the agreed date and time. A security deposit is collected for each rental and returned after inspection.";
+    private string Feedback { get; set; } = string.Empty;
+    private string PaymentFeedback { get; set; } = string.Empty;
+    private string TermsFeedback { get; set; } = string.Empty;
+    private string? EditingPaymentMethodId { get; set; }
+    private string PaymentMethodName { get; set; } = string.Empty;
+    private string PaymentMethodDetails { get; set; } = string.Empty;
+    private bool IsAddingPaymentMethod { get; set; }
+    private bool IsPaymentEditorOpen => IsAddingPaymentMethod || EditingPaymentMethodId is not null;
+
+    protected override void OnInitialized()
+    {
+        FeaturedItem = PreviewSettings.FeaturedItemSlug;
+        BookingBuffer = PreviewSettings.BookingBuffer;
+        MinimumRental = PreviewSettings.MinimumRental;
+        BusinessName = PreviewSettings.BusinessName;
+        SupportEmail = PreviewSettings.SupportEmail;
+        RentalTerms = PreviewSettings.RentalTerms;
+    }
+
+    private void SaveConfiguration()
+    {
+        if (!string.IsNullOrWhiteSpace(SupportEmail) && !System.Net.Mail.MailAddress.TryCreate(SupportEmail, out _))
+        {
+            Feedback = "Enter a valid support email address before saving.";
+            return;
+        }
+
+        PreviewSettings.FeaturedItemSlug = FeaturedItem;
+        PreviewSettings.BookingBuffer = BookingBuffer;
+        PreviewSettings.MinimumRental = MinimumRental;
+        PreviewSettings.BusinessName = BusinessName.Trim();
+        PreviewSettings.SupportEmail = SupportEmail.Trim();
+        Feedback = "Configuration preview saved and shared with customer screens for this session.";
+    }
+
+    private void SaveTerms()
+    {
+        if (string.IsNullOrWhiteSpace(RentalTerms))
+        {
+            TermsFeedback = "Add rental terms before saving.";
+            return;
+        }
+
+        PreviewSettings.RentalTerms = RentalTerms.Trim();
+        TermsFeedback = "Terms preview saved and shared with the customer terms page for this session.";
+    }
+
+    private void StartAddingPaymentMethod()
+    {
+        IsAddingPaymentMethod = true;
+        EditingPaymentMethodId = null;
+        PaymentMethodName = string.Empty;
+        PaymentMethodDetails = string.Empty;
+        PaymentFeedback = string.Empty;
+    }
+
+    private void EditPaymentMethod(PreviewPaymentMethod method)
+    {
+        IsAddingPaymentMethod = false;
+        EditingPaymentMethodId = method.Id;
+        PaymentMethodName = method.Name;
+        PaymentMethodDetails = method.Details;
+        PaymentFeedback = string.Empty;
+    }
+
+    private void CancelPaymentMethodEdit()
+    {
+        IsAddingPaymentMethod = false;
+        EditingPaymentMethodId = null;
+    }
+
+    private void SavePaymentMethod()
+    {
+        if (string.IsNullOrWhiteSpace(PaymentMethodName) || string.IsNullOrWhiteSpace(PaymentMethodDetails))
+        {
+            PaymentFeedback = "Enter a method name and account instructions before saving.";
+            return;
+        }
+
+        if (IsAddingPaymentMethod)
+        {
+            var id = $"method-{PreviewSettings.PaymentMethods.Count + 1}";
+            PreviewSettings.PaymentMethods.Add(new(id, PaymentMethodName.Trim(), PaymentMethodDetails.Trim()));
+            PaymentFeedback = "Payment method added to customer checkout for this session only.";
+        }
+        else if (EditingPaymentMethodId is not null)
+        {
+            var index = PreviewSettings.PaymentMethods.FindIndex(method => method.Id == EditingPaymentMethodId);
+            if (index >= 0)
+            {
+                PreviewSettings.PaymentMethods[index] = new(EditingPaymentMethodId, PaymentMethodName.Trim(), PaymentMethodDetails.Trim());
+                PaymentFeedback = "Payment method preview updated in customer checkout for this session.";
+            }
+        }
+
+        IsAddingPaymentMethod = false;
+        EditingPaymentMethodId = null;
+    }
+}

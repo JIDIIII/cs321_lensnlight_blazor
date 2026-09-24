@@ -1,5 +1,7 @@
 using LensNLight.Blazor.Components;
 using LensNLight.Blazor.Features.Catalog.Services;
+using LensNLight.Blazor.Features.Booking.Services;
+using LensNLight.Blazor.Features.Admin.Services;
 using LensNLight.Blazor.Features.Tracking.Services;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -13,6 +15,8 @@ builder.Services.AddDataProtection()
         Path.Combine(builder.Environment.ContentRootPath, ".data-protection")));
 builder.Services.AddSingleton<ICameraCatalogService, MockCameraCatalogService>();
 builder.Services.AddSingleton<IBookingTrackingService, MockBookingTrackingService>();
+builder.Services.AddScoped<BookingPreviewState>();
+builder.Services.AddScoped<FrontendPreviewSettings>();
 
 var app = builder.Build();
 

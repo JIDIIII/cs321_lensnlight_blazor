@@ -1,9 +1,20 @@
 @namespace LensNLight.Blazor.Features.Payments.Pages
 @page "/payment/{BookingNumber}"
 @inject NavigationManager Navigation
+@inject ICameraCatalogService Catalog
+@inject BookingPreviewState PreviewState
+@inject FrontendPreviewSettings PreviewSettings
 
 @{
     var submitted = PaymentSubmitted;
+    var itemSlug = QueryValue("item") ?? PreviewState.Slug;
+    var item = Catalog.GetBySlug(itemSlug) ?? Catalog.GetBySlug("panasonic-lumix-tz99")!;
+    var rentalDays = int.TryParse(QueryValue("days"), out var requestedDays)
+        ? Math.Clamp(requestedDays, 1, 365)
+        : Math.Max(1, (int)(PreviewState.EndDate.Date - PreviewState.StartDate.Date).TotalDays);
+    var dailyRate = RateForDuration(item, rentalDays);
+    var rentalTotal = dailyRate * rentalDays;
+    var totalDue = rentalTotal + item.SecurityDeposit;
 }
 
 <PageTitle>Payment | LENS N' LIGHT</PageTitle>
@@ -19,6 +30,7 @@
                 <p>This is a frontend preview. Your demo booking is ready to view in booking tracking.</p>
                 <span class="payment-ref-label">BOOKING NUMBER</span>
                 <strong class="booking-number-display">@BookingNumber</strong>
+                <p class="payment-result-details">@PreviewState.PaymentMethod · Reference @PreviewState.PaymentReference<br />Selected file: @PreviewState.ProofFileName<br />Preview only · nothing was uploaded.</p>
                 <a class="primary-action" href="/track?booking=@Uri.EscapeDataString(BookingNumber)">Track booking <span aria-hidden="true">→</span></a>
             </section>
         }
@@ -31,25 +43,28 @@
             </header>
             <div class="booking-ref"><span>BOOKING NUMBER</span><strong>@BookingNumber</strong><a href="/track?booking=@Uri.EscapeDataString(BookingNumber)">Track booking →</a></div>
             <div class="flow-grid">
-                <section class="flow-form-card">
+                <form class="flow-form-card" @onsubmit="SubmitPayment" @onsubmit:preventDefault>
                     <h2>Payment instructions</h2>
                     <p class="muted-copy">Choose a payment method and enter the reference details for this local preview.</p>
                     <div class="payment-methods">
-                        <article><span>GCash</span><strong>0917 123 4567</strong><small>LENS N' LIGHT Camera Rental</small></article>
-                        <article><span>Bank transfer</span><strong>BDO · 0123 456 789</strong><small>LENS N' LIGHT Camera Rental</small></article>
+                        @foreach (var method in PreviewSettings.PaymentMethods)
+                        {
+                            <article @key="method.Id"><span>@method.Name</span><strong>@method.Details</strong><small>@PreviewSettings.BusinessName</small></article>
+                        }
                     </div>
                     <div class="field-grid">
-                        <label>Payment method<select><option>GCash</option><option>Bank transfer</option></select></label>
-                        <label>Reference number<input placeholder="Enter transaction reference" /></label>
-                        <label class="wide">Proof of payment<input type="file" accept="image/*,.pdf" /></label>
+                        <label>Payment method<select @bind="PaymentMethod">@foreach (var method in PreviewSettings.PaymentMethods) { <option value="@method.Name">@method.Name</option> }</select></label>
+                        <label>Reference number<input @bind="PaymentReference" autocomplete="off" placeholder="Enter transaction reference" /></label>
+                        <label class="wide">Proof of payment<InputFile accept="image/*,.pdf" OnChange="OnProofSelected" /></label>
                     </div>
-                    <p class="payment-demo-note">Demo only · Selecting a file does not upload it or submit a real payment.</p>
-                    <a class="primary-action full" href="/payment/@Uri.EscapeDataString(BookingNumber)?state=submitted">Submit payment proof</a>
-                </section>
+                    <p class="payment-demo-note">Demo only · Selecting a file does not upload it or submit a real payment.@if (!string.IsNullOrWhiteSpace(ProofFileName)) { <span> Selected: @ProofFileName</span> }</p>
+                    @if (!string.IsNullOrWhiteSpace(PaymentError)) { <p class="interaction-message error" role="alert">@PaymentError</p> }
+                    <button class="primary-action full" type="submit">Submit payment proof <span aria-hidden="true">→</span></button>
+                </form>
                 <aside class="flow-item payment-summary">
                     <h2>Payment summary</h2>
-                    <dl class="review-list"><div><dt>Camera rental · 2 days</dt><dd>₱2,800.00</dd></div><div><dt>Security deposit</dt><dd>₱5,000.00</dd></div><div><dt>Pickup</dt><dd>₱0.00</dd></div></dl>
-                    <div class="flow-total"><span>Total due</span><strong>₱7,800.00</strong></div>
+                    <dl class="review-list"><div><dt>@item.Name · @rentalDays day@(rentalDays == 1 ? "" : "s")</dt><dd>₱@rentalTotal.ToString("N2")</dd></div><div><dt>Rental period</dt><dd>@PreviewState.StartDate.ToString("MMM d") – @PreviewState.EndDate.ToString("MMM d, yyyy")</dd></div><div><dt>Security deposit</dt><dd>₱@item.SecurityDeposit.ToString("N2")</dd></div><div><dt>Pickup</dt><dd>₱0.00</dd></div></dl>
+                    <div class="flow-total"><span>Total due</span><strong>₱@totalDue.ToString("N2")</strong></div>
                     <p>Payment deadline<br /><strong>Within 24 hours of booking</strong></p>
                     <a class="secondary-action" href="@BookingReviewUrl">← Back to booking review</a>
                 </aside>
@@ -61,6 +76,24 @@
 
 @code {
     [Parameter] public string BookingNumber { get; set; } = "";
+    private string PaymentMethod { get; set; } = "GCash";
+    private string PaymentReference { get; set; } = string.Empty;
+    private string ProofFileName { get; set; } = string.Empty;
+    private string PaymentError { get; set; } = string.Empty;
+    protected override void OnParametersSet()
+    {
+        var itemSlug = QueryValue("item");
+        if (!string.IsNullOrWhiteSpace(itemSlug)) PreviewState.BeginFor(itemSlug);
+        if (DateTime.TryParse(QueryValue("start"), out var startDate)) PreviewState.StartDate = startDate.Date;
+        if (DateTime.TryParse(QueryValue("end"), out var endDate)) PreviewState.EndDate = endDate.Date;
+        PaymentMethod = PreviewState.PaymentMethod;
+        if (!PreviewSettings.PaymentMethods.Any(method => method.Name.Equals(PaymentMethod, StringComparison.OrdinalIgnoreCase)))
+        {
+            PaymentMethod = PreviewSettings.PaymentMethods.FirstOrDefault()?.Name ?? string.Empty;
+        }
+        PaymentReference = PreviewState.PaymentReference;
+        ProofFileName = PreviewState.ProofFileName;
+    }
 
     private string BookingReviewUrl
     {
@@ -68,7 +101,9 @@
         {
             var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
             var itemSlug = query.TryGetValue("item", out var value) ? value.ToString() : "panasonic-lumix-tz99";
-            return $"/book/{Uri.EscapeDataString(itemSlug)}?step=review";
+            var start = query.TryGetValue("start", out var startValue) ? startValue.ToString() : string.Empty;
+            var end = query.TryGetValue("end", out var endValue) ? endValue.ToString() : string.Empty;
+            return $"/book/{Uri.EscapeDataString(itemSlug)}?step=review&start={Uri.EscapeDataString(start)}&end={Uri.EscapeDataString(end)}";
         }
     }
 
@@ -77,7 +112,42 @@
         get
         {
             var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
-            return query.TryGetValue("state", out var state) && state == "submitted";
+            return PreviewState.PaymentSubmitted || (query.TryGetValue("state", out var state) && state == "submitted");
         }
+    }
+
+    private string? QueryValue(string key)
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        return query.TryGetValue(key, out var value) ? value.ToString() : null;
+    }
+
+    private static decimal RateForDuration(CameraItem item, int days)
+    {
+        if (item.PricingTiers.Count == 0) return item.StartingPrice;
+        var tierIndex = days switch { <= 1 => 0, <= 4 => Math.Min(1, item.PricingTiers.Count - 1), _ => item.PricingTiers.Count - 1 };
+        return item.PricingTiers[tierIndex].DailyRate;
+    }
+
+    private void OnProofSelected(InputFileChangeEventArgs args)
+    {
+        ProofFileName = args.File.Name;
+        PreviewState.ProofFileName = ProofFileName;
+        PaymentError = string.Empty;
+    }
+
+    private void SubmitPayment()
+    {
+        if (string.IsNullOrWhiteSpace(PaymentReference) || string.IsNullOrWhiteSpace(ProofFileName))
+        {
+            PaymentError = "Enter the payment reference and select a proof file to continue.";
+            return;
+        }
+
+        PaymentError = string.Empty;
+        PreviewState.PaymentMethod = PaymentMethod;
+        PreviewState.PaymentReference = PaymentReference.Trim();
+        PreviewState.ProofFileName = ProofFileName;
+        PreviewState.PaymentSubmitted = true;
     }
 }

@@ -1,7 +1,10 @@
+@using LensNLight.Blazor.Features.Admin.Services
+@inject FrontendPreviewSettings PreviewSettings
+
 <footer class="site-footer">
     <div class="site-footer-inner">
         <div class="footer-brand">
-            <p>LENS N' LIGHT</p>
+            <p>@PreviewSettings.BusinessName</p>
             <span>Browse available cameras, compare rates, and preview your booking journey in one place.</span>
         </div>
         <div class="footer-links">
@@ -9,6 +12,10 @@
                 <span>Explore</span>
                 <a href="/#rental-catalog">Browse cameras</a>
                 <a href="/track-booking">Track booking</a>
+                @if (!string.IsNullOrWhiteSpace(PreviewSettings.SupportEmail))
+                {
+                    <a href="mailto:@PreviewSettings.SupportEmail">Email support</a>
+                }
             </nav>
             <div class="footer-scope">
                 <span>Prototype</span>

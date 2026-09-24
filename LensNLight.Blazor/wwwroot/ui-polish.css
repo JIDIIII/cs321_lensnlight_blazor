@@ -139,6 +139,164 @@ tbody tr:hover {
     overflow-wrap: anywhere;
 }
 
+.interaction-message {
+    margin: 12px 0 0;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: rgba(255, 250, 241, 0.035);
+    color: var(--color-text-muted);
+    padding: 11px 13px;
+    font-size: 0.78rem;
+    line-height: 1.55;
+}
+
+.interaction-message.success {
+    border-color: rgba(155, 200, 164, 0.34);
+    background: rgba(155, 200, 164, 0.075);
+    color: #b8d9be;
+}
+
+.interaction-message.error {
+    border-color: rgba(211, 139, 139, 0.42);
+    background: rgba(211, 139, 139, 0.08);
+    color: #e0a8a8;
+}
+
+.calendar-grid button {
+    display: grid;
+    min-width: 0;
+    min-height: 36px;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
+
+.calendar-grid button:hover:not(:disabled),
+.calendar-grid button:focus-visible {
+    border-color: rgba(216, 184, 102, 0.5);
+    background: rgba(216, 184, 102, 0.1);
+    color: var(--color-text);
+}
+
+.calendar-grid button:disabled {
+    color: #625f59;
+    cursor: not-allowed;
+}
+
+.calendar-grid button.selected {
+    background: var(--color-gold);
+    color: #101010;
+    font-weight: 800;
+}
+
+.calendar-grid button.in-range {
+    border-radius: 0;
+    background: rgba(216, 184, 102, 0.12);
+    color: var(--color-text);
+}
+
+.calendar-empty {
+    min-height: 36px;
+}
+
+.calendar-help {
+    margin: 12px 0 0;
+    color: var(--color-text-dim);
+    font-size: 0.72rem;
+}
+
+.check-line a {
+    color: var(--color-gold);
+    text-underline-offset: 3px;
+}
+
+.field-hint {
+    color: var(--color-text-dim);
+    font-size: 0.68rem;
+    font-weight: 500;
+}
+
+.configured-terms {
+    white-space: pre-line;
+}
+
+.payment-method-editor {
+    display: grid;
+    gap: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.12);
+    padding: 18px;
+}
+
+.payment-method-editor h3 {
+    margin: 0;
+    font-size: 0.94rem;
+}
+
+.table-empty {
+    padding: 26px 12px;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.inventory-preview-body {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
+    align-items: center;
+    gap: 22px;
+}
+
+.inventory-preview-body > img {
+    width: 100%;
+    max-height: 220px;
+    border-radius: 12px;
+    background: #101011;
+    object-fit: contain;
+}
+
+.inventory-preview-body p {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.inventory-preview-body > div > strong {
+    color: var(--color-gold-hover);
+    font-size: 1.2rem;
+}
+
+.inventory-preview-inclusions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.inventory-preview-inclusions li {
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    padding: 6px 10px;
+    font-size: 0.75rem;
+}
+
+.status-chip.maintenance {
+    border-color: rgba(216, 184, 102, 0.35);
+    background: rgba(216, 184, 102, 0.1);
+    color: var(--color-gold-hover);
+}
+
+.status-chip.unavailable {
+    border-color: rgba(211, 139, 139, 0.35);
+    background: rgba(211, 139, 139, 0.1);
+    color: #e0a8a8;
+}
+
 .customer-page > main,
 .admin-content,
 .portal-login-card {
@@ -189,6 +347,10 @@ tbody tr:hover {
 }
 
 @media (max-width: 650px) {
+    .inventory-preview-body {
+        grid-template-columns: 1fr;
+    }
+
     .flow-steps li {
         min-width: 0;
     }

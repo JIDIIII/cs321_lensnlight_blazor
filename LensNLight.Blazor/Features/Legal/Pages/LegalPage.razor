@@ -2,6 +2,7 @@
 @page "/privacy"
 @page "/terms"
 @inject NavigationManager Navigation
+@inject FrontendPreviewSettings PreviewSettings
 
 @{
     var privacy = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.EndsWith("/privacy", StringComparison.OrdinalIgnoreCase);
@@ -26,7 +27,7 @@
             }
             else
             {
-                <h2>Rental terms and conditions</h2><p>These terms describe the expectations for requesting, collecting, using, and returning equipment rented from LENS N' LIGHT.</p>
+                <h2>Rental terms and conditions</h2><p class="configured-terms">@PreviewSettings.RentalTerms</p>
                 <h2>Booking requests and availability</h2><p>A booking request is subject to availability review. A request is not confirmed until the booking details and payment have been reviewed.</p>
                 <h2>Payment and security deposit</h2><p>Payment instructions and any security deposit are shown during checkout. Keep payment references until your rental is complete.</p>
                 <h2>Equipment care</h2><p>Use the equipment responsibly, keep it protected, and return it with the accessories listed in the item details.</p>

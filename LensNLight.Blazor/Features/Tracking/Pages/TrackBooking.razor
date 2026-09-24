@@ -3,6 +3,8 @@
 @page "/track"
 @inject IBookingTrackingService TrackingService
 @inject NavigationManager Navigation
+@inject BookingPreviewState PreviewState
+@inject ICameraCatalogService Catalog
 
 <PageTitle>Track Booking | LENS N' LIGHT</PageTitle>
 
@@ -80,7 +82,38 @@
     private void ExecuteLookup()
     {
         LookupAttempted = true;
-        Result = TrackingService.Find(BookingNumber);
+        Result = FindPreviewBooking(BookingNumber) ?? TrackingService.Find(BookingNumber);
+    }
+
+    private BookingTrackingResult? FindPreviewBooking(string bookingNumber)
+    {
+        if (string.IsNullOrWhiteSpace(PreviewState.Slug)
+            || !PreviewState.BookingNumber.Equals(bookingNumber.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var duration = Math.Max(1, (int)(PreviewState.EndDate.Date - PreviewState.StartDate.Date).TotalDays);
+        var item = Catalog.GetBySlug(PreviewState.Slug);
+        return new BookingTrackingResult
+        {
+            BookingNumber = PreviewState.BookingNumber,
+            RenterName = string.IsNullOrWhiteSpace(PreviewState.RenterName) ? "Preview renter" : PreviewState.RenterName,
+            ItemName = item?.Name ?? PreviewState.Slug,
+            StartAt = PreviewState.StartDate.Date,
+            EndAt = PreviewState.EndDate.Date,
+            Duration = $"{duration} day{(duration == 1 ? string.Empty : "s")} ({duration * 24}h)",
+            DeliveryMode = "Pickup",
+            Status = PreviewState.PaymentSubmitted ? "Payment proof submitted (preview)" : "Pending payment (preview)",
+            Steps =
+            [
+                new("Pending", BookingStepState.Active),
+                new("Booked", BookingStepState.Upcoming),
+                new("Picked Up", BookingStepState.Upcoming),
+                new("In Use", BookingStepState.Upcoming),
+                new("Returned", BookingStepState.Upcoming)
+            ]
+        };
     }
 
     private void UseDemoNumber()

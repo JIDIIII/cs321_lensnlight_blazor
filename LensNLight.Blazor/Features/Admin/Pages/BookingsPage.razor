@@ -3,44 +3,160 @@
 @inject NavigationManager Navigation
 
 @{
-    var create = Query("create") == "1";
-    var selected = Query("booking");
+    var creating = Query("create") == "1";
+    var selectedNumber = Query("booking");
+    var selectedBooking = DemoBookings.FirstOrDefault(booking => booking.Number.Equals(selectedNumber, StringComparison.OrdinalIgnoreCase));
 }
 
 <PageTitle>Booking · Admin · LENS N' LIGHT</PageTitle>
 <AdminShell Active="booking" Title="Booking" Description="Manage reservations, payment review, and rental schedules.">
     <div class="stat-grid">
-        <article><span>Total bookings</span><strong>24</strong><small>This month</small></article>
-        <article><span>Pending review</span><strong>03</strong><small>Needs attention</small></article>
-        <article><span>Active rentals</span><strong>08</strong><small>Currently out</small></article>
-        <article><span>Revenue this month</span><strong>₱86,450</strong><small>↑ 12.8% from last month</small></article>
+        <article><span>Preview bookings</span><strong>@DemoBookings.Count</strong><small>Local sample records</small></article>
+        <article><span>Pending review</span><strong>@DemoBookings.Count(booking => booking.Status == "Pending")</strong><small>Needs attention</small></article>
+        <article><span>Active rentals</span><strong>@DemoBookings.Count(booking => booking.Status == "In use")</strong><small>Currently out</small></article>
+        <article><span>Preview revenue</span><strong>₱@DemoBookings.Sum(booking => booking.Amount).ToString("N0")</strong><small>Sample records only</small></article>
     </div>
 
-    @if (create)
+    @if (creating)
     {
-        <section class="admin-panel settings-panel"><div class="panel-heading"><div><span class="admin-eyebrow">MANUAL ENTRY</span><h2>Create booking</h2><p>This local screen is a visual preview only.</p></div><a class="table-action" href="/admin/booking">Close</a></div><div class="field-grid"><label>Customer name<input placeholder="Full name" /></label><label>Email<input type="email" placeholder="customer@example.com" /></label><label>Mobile number<input type="tel" placeholder="09XX XXX XXXX" /></label><label>Rental item<select><option>Canon EOS R50</option><option>Panasonic Lumix TZ99</option></select></label><label>Start date<input type="date" /></label><label>End date<input type="date" /></label></div><button class="admin-button gold" type="button">Save preview</button></section>
+        <section class="admin-panel settings-panel">
+            <div class="panel-heading"><div><span class="admin-eyebrow">MANUAL ENTRY</span><h2>Create booking</h2><p>This local screen is a visual preview only.</p></div><a class="table-action" href="/admin/booking">Close</a></div>
+            <div class="field-grid">
+                <label>Customer name<input @bind="NewCustomer" placeholder="Full name" /></label>
+                <label>Email<input type="email" @bind="NewEmail" placeholder="customer@example.com" /></label>
+                <label>Mobile number<input type="tel" @bind="NewPhone" placeholder="09XX XXX XXXX" /></label>
+                <label>Rental item<select @bind="NewItem"><option>Canon EOS R50</option><option>Panasonic Lumix TZ99</option></select></label>
+                <label>Start date<input type="date" min="@Today" @bind="NewStartDate" /></label>
+                <label>End date<input type="date" min="@Today" @bind="NewEndDate" /></label>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(CreateMessage)) { <p class="interaction-message @(CreateHasError ? "error" : "success")" role="@(CreateHasError ? "alert" : "status")">@CreateMessage</p> }
+            <button class="admin-button gold" type="button" @onclick="SaveBookingPreview">Save booking preview</button>
+        </section>
     }
 
-    @if (!string.IsNullOrWhiteSpace(selected))
+    @if (!string.IsNullOrWhiteSpace(selectedNumber))
     {
-        <section class="admin-panel settings-panel"><div class="panel-heading"><div><span class="admin-eyebrow">BOOKING DETAILS</span><h2>@selected</h2><p>Jamie Santos · Canon EOS R50</p></div><span class="status-chip pending">Pending review</span></div><div class="review-list"><div><dt>Rental period</dt><dd>September 24–26, 2026</dd></div><div><dt>Pickup / return</dt><dd>10:00 AM / 10:00 AM</dd></div><div><dt>Payment proof</dt><dd>Awaiting review</dd></div><div><dt>Amount due</dt><dd>₱8,050.00</dd></div></div><div class="flow-actions"><a class="secondary-action" href="/admin/booking">Close details</a><button class="admin-button gold" type="button">Accept booking preview</button></div></section>
+        @if (selectedBooking is not null)
+        {
+            <section class="admin-panel settings-panel">
+                <div class="panel-heading"><div><span class="admin-eyebrow">BOOKING DETAILS</span><h2>@selectedBooking.Number</h2><p>@selectedBooking.Customer · @selectedBooking.Item</p></div><span class="status-chip @StatusClass(selectedBooking.Status)">@selectedBooking.Status</span></div>
+                <div class="review-list"><div><dt>Rental period</dt><dd>@selectedBooking.StartDate.ToString("MMMM d")–@selectedBooking.EndDate.ToString("d, yyyy")</dd></div><div><dt>Contact</dt><dd>@selectedBooking.Email · @selectedBooking.Phone</dd></div><div><dt>Payment proof</dt><dd>@(selectedBooking.Status == "Pending" ? "Awaiting review" : "Preview reviewed")</dd></div><div><dt>Amount due</dt><dd>₱@selectedBooking.Amount.ToString("N2")</dd></div></div>
+                <div class="flow-actions"><a class="secondary-action" href="/admin/booking">Close details</a>@if (selectedBooking.Status == "Pending") { <button class="admin-button gold" type="button" @onclick="() => AcceptBooking(selectedBooking)">Accept booking preview</button> }</div>
+                @if (!string.IsNullOrWhiteSpace(DetailMessage)) { <p class="interaction-message success" role="status">@DetailMessage</p> }
+            </section>
+        }
+        else
+        {
+            <p class="interaction-message error" role="alert">Booking “@selectedNumber” is not in the local preview list.</p>
+        }
     }
 
     <section class="admin-panel">
         <div class="panel-heading"><div><h2>Recent bookings</h2><p>Review reservations and open a booking to inspect details.</p></div><a class="admin-button gold" href="/admin/booking?create=1">+ Create booking</a></div>
-        <form class="admin-toolbar" method="get"><input name="search" placeholder="Search booking, customer, item" value="@Query("search")" /><select name="state"><option value="">All statuses</option><option>Pending</option><option>Booked</option><option>In use</option></select><button type="submit">Filter</button></form>
+        <form class="admin-toolbar" @onsubmit="ApplyFilters" @onsubmit:preventDefault>
+            <input @bind="SearchQuery" @bind:event="oninput" placeholder="Search booking, customer, item" aria-label="Search booking, customer, or item" />
+            <select @bind="StatusFilter" aria-label="Filter by booking status"><option value="">All statuses</option><option>Pending</option><option>Booked</option><option>In use</option><option>Returned</option></select>
+            <button type="submit">Filter</button>
+            @if (!string.IsNullOrWhiteSpace(AppliedSearch) || !string.IsNullOrWhiteSpace(AppliedStatus)) { <button type="button" @onclick="ClearFilters">Clear</button> }
+        </form>
         <div class="table-scroll"><table><thead><tr><th>BOOKING</th><th>CUSTOMER</th><th>ITEM</th><th>RENTAL PERIOD</th><th>AMOUNT</th><th>STATUS</th><th></th></tr></thead><tbody>
-            <tr><td><strong>LNL-DEMO-001</strong><small>Today, 9:42 AM</small></td><td>Jamie Santos</td><td>Panasonic Lumix TZ99</td><td>Sep 24 – 26</td><td>₱8,050</td><td><span class="status-chip pending">Pending</span></td><td><a class="table-action" href="/admin/booking?booking=LNL-DEMO-001">View</a></td></tr>
-            <tr><td><strong>LNL-2026-0923</strong><small>Yesterday, 2:18 PM</small></td><td>Mika Reyes</td><td>Canon EOS R50</td><td>Sep 23 – 25</td><td>₱5,400</td><td><span class="status-chip booked">Booked</span></td><td><a class="table-action" href="/admin/booking?booking=LNL-2026-0923">View</a></td></tr>
-            <tr><td><strong>LNL-2026-0922</strong><small>Sep 22, 2026</small></td><td>Paolo Cruz</td><td>Canon EOS R50</td><td>Sep 22 – 23</td><td>₱4,200</td><td><span class="status-chip in-use">In use</span></td><td><a class="table-action" href="/admin/booking?booking=LNL-2026-0922">View</a></td></tr>
+            @foreach (var booking in FilteredBookings)
+            {
+                <tr @key="booking.Number"><td><strong>@booking.Number</strong><small>@booking.CreatedLabel</small></td><td>@booking.Customer</td><td>@booking.Item</td><td>@booking.StartDate.ToString("MMM d") – @booking.EndDate.ToString("d")</td><td>₱@booking.Amount.ToString("N0")</td><td><span class="status-chip @StatusClass(booking.Status)">@booking.Status</span></td><td><a class="table-action" href="/admin/booking?booking=@Uri.EscapeDataString(booking.Number)">View</a></td></tr>
+            }
+            @if (FilteredBookings.Count == 0) { <tr><td colspan="7" class="table-empty">No bookings match the current filters.</td></tr> }
         </tbody></table></div>
     </section>
 </AdminShell>
 
 @code {
+    private List<BookingPreview> DemoBookings { get; } = [];
+    private string SearchQuery { get; set; } = string.Empty;
+    private string AppliedSearch { get; set; } = string.Empty;
+    private string StatusFilter { get; set; } = string.Empty;
+    private string AppliedStatus { get; set; } = string.Empty;
+    private string NewCustomer { get; set; } = string.Empty;
+    private string NewEmail { get; set; } = string.Empty;
+    private string NewPhone { get; set; } = string.Empty;
+    private string NewItem { get; set; } = "Canon EOS R50";
+    private DateTime NewStartDate { get; set; } = DateTime.Today.AddDays(1);
+    private DateTime NewEndDate { get; set; } = DateTime.Today.AddDays(3);
+    private string Today => DateTime.Today.ToString("yyyy-MM-dd");
+    private string CreateMessage { get; set; } = string.Empty;
+    private bool CreateHasError { get; set; }
+    private string DetailMessage { get; set; } = string.Empty;
+    private IReadOnlyList<BookingPreview> FilteredBookings => DemoBookings.Where(booking =>
+        (string.IsNullOrWhiteSpace(AppliedSearch) || booking.Number.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase)
+            || booking.Customer.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase)
+            || booking.Item.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase))
+        && (string.IsNullOrWhiteSpace(AppliedStatus) || booking.Status.Equals(AppliedStatus, StringComparison.OrdinalIgnoreCase))).ToArray();
+
+    protected override void OnInitialized()
+    {
+        var today = DateTime.Today;
+        DemoBookings.AddRange([
+            new("LNL-DEMO-001", "Jamie Santos", "jamie@example.com", "0917 555 0111", "Panasonic Lumix TZ99", today, today.AddDays(2), 8050m, "Pending", "Today, 9:42 AM"),
+            new("LNL-2026-0923", "Mika Reyes", "mika@example.com", "0917 555 0222", "Canon EOS R50", today.AddDays(-1), today.AddDays(1), 5400m, "Booked", "Yesterday, 2:18 PM"),
+            new("LNL-2026-0922", "Paolo Cruz", "paolo@example.com", "0917 555 0333", "Canon EOS R50", today.AddDays(-2), today.AddDays(-1), 4200m, "In use", today.AddDays(-2).ToString("MMM d, yyyy"))
+        ]);
+    }
+
+    private void ApplyFilters()
+    {
+        AppliedSearch = SearchQuery.Trim();
+        AppliedStatus = StatusFilter;
+    }
+
+    private void ClearFilters()
+    {
+        SearchQuery = AppliedSearch = StatusFilter = AppliedStatus = string.Empty;
+    }
+
+    private void SaveBookingPreview()
+    {
+        if (string.IsNullOrWhiteSpace(NewCustomer) || string.IsNullOrWhiteSpace(NewEmail) || string.IsNullOrWhiteSpace(NewPhone)
+            || !System.Net.Mail.MailAddress.TryCreate(NewEmail, out _) || NewEndDate.Date <= NewStartDate.Date)
+        {
+            CreateMessage = "Enter the customer's name, a valid email, a mobile number, and a return date after pickup.";
+            CreateHasError = true;
+            return;
+        }
+
+        var number = $"LNL-PREVIEW-{DemoBookings.Count + 1:000}";
+        var dailyRate = NewItem.Contains("Panasonic", StringComparison.OrdinalIgnoreCase) ? 440m : 650m;
+        var amount = (decimal)(NewEndDate.Date - NewStartDate.Date).TotalDays * dailyRate + (NewItem.Contains("Panasonic", StringComparison.OrdinalIgnoreCase) ? 500m : 800m);
+        DemoBookings.Insert(0, new(number, NewCustomer.Trim(), NewEmail.Trim(), NewPhone.Trim(), NewItem, NewStartDate, NewEndDate, amount, "Pending", "Just now · Preview"));
+        CreateMessage = $"Booking {number} was added to this page preview only.";
+        CreateHasError = false;
+        DetailMessage = CreateMessage;
+        Navigation.NavigateTo($"/admin/booking?booking={Uri.EscapeDataString(number)}");
+    }
+
+    private void AcceptBooking(BookingPreview booking)
+    {
+        booking.Status = "Booked";
+        DetailMessage = $"{booking.Number} is marked Booked in this page preview only.";
+    }
+
+    private static string StatusClass(string status) => status.ToLowerInvariant().Replace(' ', '-');
+
     private string? Query(string key)
     {
         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
         return query.TryGetValue(key, out var value) ? value.ToString() : null;
+    }
+
+    private sealed class BookingPreview(string number, string customer, string email, string phone, string item, DateTime startDate, DateTime endDate, decimal amount, string status, string createdLabel)
+    {
+        public string Number { get; } = number;
+        public string Customer { get; } = customer;
+        public string Email { get; } = email;
+        public string Phone { get; } = phone;
+        public string Item { get; } = item;
+        public DateTime StartDate { get; } = startDate;
+        public DateTime EndDate { get; } = endDate;
+        public decimal Amount { get; } = amount;
+        public string Status { get; set; } = status;
+        public string CreatedLabel { get; } = createdLabel;
     }
 }

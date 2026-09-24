@@ -2,45 +2,210 @@
 @page "/admin"
 @page "/admin/items"
 @inject ICameraCatalogService Catalog
-@inject NavigationManager Navigation
-
-@{
-    var isCreating = Query("create") == "1";
-    var editSlug = Query("edit");
-    var editing = string.IsNullOrWhiteSpace(editSlug) ? null : Catalog.GetBySlug(editSlug);
-}
 
 <PageTitle>Items · Admin · LENS N' LIGHT</PageTitle>
 <AdminShell Active="items" Title="Items" Description="Manage rental inventory, pricing, availability, and item details.">
-            <section class="admin-panel">
-                <div class="panel-heading"><div><h2>Item inventory</h2><p>Public catalog and rental configuration.</p></div><a class="admin-button gold" href="/admin/items?create=1">+ Add item</a></div>
-                @if (!string.IsNullOrWhiteSpace(editSlug) && editing is null)
-                {
-                    <p class="payment-demo-note">That item is not in the local preview catalog.</p>
-                }
-                <div class="admin-toolbar"><input placeholder="Search items by name or category" /><button type="button">Search</button></div>
-                <div class="table-scroll"><table><thead><tr><th>ITEM</th><th>CATEGORY</th><th>STATUS</th><th>DAILY RATE</th><th>DEPOSIT</th><th>VISIBILITY</th><th>ACTIONS</th></tr></thead><tbody>
-                    @foreach (var camera in Catalog.GetAll())
-                    {
-                        <tr><td><div class="item-cell"><img src="@camera.Images.FirstOrDefault()?.Url" alt="" /><span><strong>@camera.Name</strong><small>@camera.Slug</small></span></div></td><td>@camera.Category</td><td><span class="status-chip active">@camera.Status</span></td><td>₱@camera.StartingPrice.ToString("N0")</td><td>₱@camera.SecurityDeposit.ToString("N0")</td><td><span class="status-chip active">Listed</span></td><td><a class="table-action" href="/admin/items?edit=@camera.Slug">Edit</a><span aria-hidden="true"> · </span><a class="table-action" href="/items/@camera.Slug">Preview</a></td></tr>
-                    }
-                </tbody></table></div>
-            </section>
-            @if (isCreating || editing is not null)
+    <section class="admin-panel">
+        <div class="panel-heading"><div><h2>Item inventory</h2><p>Public catalog and rental configuration.</p></div><button class="admin-button gold" type="button" @onclick="StartNewItem">+ Add item</button></div>
+        <form class="admin-toolbar" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+            <input @bind="SearchQuery" @bind:event="oninput" placeholder="Search items by name or category" aria-label="Search items by name or category" />
+            <button type="submit">Search</button>
+            @if (!string.IsNullOrWhiteSpace(AppliedSearch)) { <button type="button" @onclick="ClearSearch">Clear</button> }
+        </form>
+        <div class="table-scroll"><table><thead><tr><th>ITEM</th><th>CATEGORY</th><th>STATUS</th><th>DAILY RATE</th><th>DEPOSIT</th><th>VISIBILITY</th><th>ACTIONS</th></tr></thead><tbody>
+            @foreach (var camera in FilteredItems)
             {
-                <section class="admin-panel settings-panel" aria-label="@(isCreating ? "Add item" : "Edit item")">
-                    <div class="panel-heading"><div><span class="admin-eyebrow">@(isCreating ? "NEW INVENTORY" : "INVENTORY EDITOR")</span><h2>@(isCreating ? "Add item" : $"Edit {editing!.Name}")</h2></div><a class="table-action" href="/admin/items">Close</a></div>
-                    <p class="muted-copy">Frontend preview only. Saving does not change inventory or availability.</p>
-                    <div class="field-grid"><label>Item name<input value="@(editing?.Name ?? "")" placeholder="Camera or accessory name" /></label><label>Category<select><option>Camera</option><option>Lens</option><option>Accessories</option></select></label><label>Brand<input value="@(editing?.Brand ?? "")" placeholder="Brand" /></label><label>Model<input value="@(editing?.Model ?? "")" placeholder="Model" /></label><label>One-day rate<input type="number" value="@(editing?.StartingPrice ?? 0)" /></label><label>Security deposit<input type="number" value="@(editing?.SecurityDeposit ?? 0)" /></label><label>Item status<select><option>Available</option><option>Maintenance</option><option>Unavailable</option></select></label><label>Visibility<select><option>Listed</option><option>Archived</option></select></label><label class="wide">Description<textarea rows="4" placeholder="Describe this rental item">@editing?.Description</textarea></label><label class="wide">Upload item images<input type="file" accept="image/*" multiple /></label><label class="wide">Included accessories<textarea rows="3" placeholder="One item per line">@string.Join(Environment.NewLine, editing?.Accessories ?? Array.Empty<string>())</textarea></label></div>
-                    <div class="flow-actions"><a class="secondary-action" href="/admin/items">Cancel</a><button class="admin-button gold" type="button">Save preview</button></div>
-                </section>
+                <tr @key="camera.Id">
+                    <td><div class="item-cell"><img src="@(camera.Images.FirstOrDefault()?.Url ?? "/images/cameras/canon-eos-r50-1.webp")" alt="" /><span><strong>@camera.Name</strong><small>@camera.Slug</small></span></div></td>
+                    <td>@camera.Category</td><td><span class="status-chip @camera.Status.ToString().ToLowerInvariant()">@camera.Status</span></td>
+                    <td>₱@camera.StartingPrice.ToString("N0")</td><td>₱@camera.SecurityDeposit.ToString("N0")</td>
+                    <td><span class="status-chip @(IsListed(camera.Slug) ? "active" : "pending")">@(IsListed(camera.Slug) ? "Listed" : "Archived")</span></td>
+                    <td><button class="table-action" type="button" @onclick="() => BeginEdit(camera)">Edit</button><span aria-hidden="true"> · </span><button class="table-action" type="button" @onclick="() => OpenPreview(camera)">Preview</button></td>
+                </tr>
             }
+            @if (FilteredItems.Count == 0)
+            {
+                <tr><td colspan="7" class="table-empty">No inventory items match “@AppliedSearch”.</td></tr>
+            }
+        </tbody></table></div>
+    </section>
+
+    @if (PreviewingItem is not null)
+    {
+        <section class="admin-panel inventory-preview" aria-label="Customer item preview">
+            <div class="panel-heading"><div><span class="admin-eyebrow">CUSTOMER VIEW</span><h2>@PreviewingItem.Name</h2><p>Preview of the locally edited inventory values.</p></div><button class="table-action" type="button" @onclick="ClosePreview">Close</button></div>
+            <div class="inventory-preview-body">
+                <img src="@(PreviewingItem.Images.FirstOrDefault()?.Url ?? "/images/cameras/canon-eos-r50-1.webp")" alt="@PreviewingItem.Name" />
+                <div><span class="status-chip @PreviewingItem.Status.ToString().ToLowerInvariant()">@PreviewingItem.Status</span><p>@PreviewingItem.Description</p><strong>₱@PreviewingItem.StartingPrice.ToString("N0") / day</strong><p>Security deposit · ₱@PreviewingItem.SecurityDeposit.ToString("N0")</p></div>
+            </div>
+            <ul class="inventory-preview-inclusions">@foreach (var inclusion in PreviewingItem.Accessories) { <li>@inclusion</li> }</ul>
+        </section>
+    }
+
+    @if (EditorOpen)
+    {
+        <section class="admin-panel settings-panel" aria-label="@(EditingSlug is null ? "Add item" : "Edit item")">
+            <div class="panel-heading"><div><span class="admin-eyebrow">@(EditingSlug is null ? "NEW INVENTORY" : "INVENTORY EDITOR")</span><h2>@(EditingSlug is null ? "Add item" : $"Edit {DraftName}")</h2></div><button class="table-action" type="button" @onclick="CancelEdit">Close</button></div>
+            <p class="muted-copy">This is an in-page preview. Changes remain in this browser session and are not uploaded or persisted.</p>
+            <div class="field-grid">
+                <label>Item name<input @bind="DraftName" placeholder="Camera or accessory name" /></label>
+                <label>Category<select @bind="DraftCategory"><option>Camera</option><option>Lens</option><option>Accessories</option></select></label>
+                <label>Brand<input @bind="DraftBrand" placeholder="Brand" /></label>
+                <label>Model<input @bind="DraftModel" placeholder="Model" /></label>
+                <label>One-day rate<input type="number" min="0" step="1" @bind="DraftPrice" /></label>
+                <label>Security deposit<input type="number" min="0" step="1" @bind="DraftDeposit" /></label>
+                <label>Item status<select @bind="DraftStatus"><option value="Available">Available</option><option value="Maintenance">Maintenance</option><option value="Unavailable">Unavailable</option></select></label>
+                <label>Visibility<select @bind="DraftListed"><option value="true">Listed</option><option value="false">Archived</option></select></label>
+                <label class="wide">Description<textarea rows="4" @bind="DraftDescription" placeholder="Describe this rental item"></textarea></label>
+                <label class="wide">Select item images<InputFile accept="image/*" multiple OnChange="OnImagesSelected" /></label>
+                <label class="wide">Included accessories<textarea rows="3" @bind="DraftAccessoriesText" placeholder="One item per line"></textarea></label>
+            </div>
+            @if (SelectedImageNames.Count > 0) { <p class="interaction-message">Selected file names for preview only: @string.Join(", ", SelectedImageNames)</p> }
+            @if (!string.IsNullOrWhiteSpace(EditorMessage)) { <p class="interaction-message @(EditorHasError ? "error" : "success")" role="@(EditorHasError ? "alert" : "status")">@EditorMessage</p> }
+            <div class="flow-actions"><button class="secondary-action" type="button" @onclick="CancelEdit">Cancel</button><button class="admin-button gold" type="button" @onclick="SaveItem">Save preview</button></div>
+        </section>
+    }
+    @if (!string.IsNullOrWhiteSpace(ListMessage)) { <p class="interaction-message success" role="status">@ListMessage</p> }
 </AdminShell>
 
 @code {
-    private string? Query(string key)
+    private List<CameraItem> PreviewItems { get; set; } = [];
+    private Dictionary<string, bool> ListedState { get; } = new(StringComparer.OrdinalIgnoreCase);
+    private string SearchQuery { get; set; } = string.Empty;
+    private string AppliedSearch { get; set; } = string.Empty;
+    private bool EditorOpen { get; set; }
+    private CameraItem? PreviewingItem { get; set; }
+    private string? EditingSlug { get; set; }
+    private string DraftName { get; set; } = string.Empty;
+    private string DraftCategory { get; set; } = "Camera";
+    private string DraftBrand { get; set; } = string.Empty;
+    private string DraftModel { get; set; } = string.Empty;
+    private string DraftDescription { get; set; } = string.Empty;
+    private string DraftAccessoriesText { get; set; } = string.Empty;
+    private decimal DraftPrice { get; set; }
+    private decimal DraftDeposit { get; set; }
+    private CameraAvailability DraftStatus { get; set; } = CameraAvailability.Available;
+    private bool DraftListed { get; set; } = true;
+    private List<string> SelectedImageNames { get; } = [];
+    private string EditorMessage { get; set; } = string.Empty;
+    private bool EditorHasError { get; set; }
+    private string ListMessage { get; set; } = string.Empty;
+    private IReadOnlyList<CameraItem> FilteredItems => string.IsNullOrWhiteSpace(AppliedSearch)
+        ? PreviewItems
+        : PreviewItems.Where(item => item.Name.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase)
+            || item.Brand.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase)
+            || item.Model.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase)
+            || item.Category.Contains(AppliedSearch, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    protected override void OnInitialized()
     {
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
-        return query.TryGetValue(key, out var value) ? value.ToString() : null;
+        PreviewItems = Catalog.GetAll().ToList();
+        foreach (var item in PreviewItems) ListedState[item.Slug] = true;
     }
+
+    private void ApplySearch() => AppliedSearch = SearchQuery.Trim();
+    private void ClearSearch() { SearchQuery = string.Empty; AppliedSearch = string.Empty; }
+    private bool IsListed(string slug) => !ListedState.TryGetValue(slug, out var listed) || listed;
+    private void OpenPreview(CameraItem item) { PreviewingItem = item; EditorOpen = false; }
+    private void ClosePreview() => PreviewingItem = null;
+
+    private void StartNewItem()
+    {
+        EditingSlug = null;
+        DraftName = DraftBrand = DraftModel = DraftDescription = DraftAccessoriesText = string.Empty;
+        DraftCategory = "Camera";
+        DraftPrice = 0;
+        DraftDeposit = 0;
+        DraftStatus = CameraAvailability.Available;
+        DraftListed = true;
+        SelectedImageNames.Clear();
+        EditorMessage = string.Empty;
+        EditorOpen = true;
+        PreviewingItem = null;
+    }
+
+    private void BeginEdit(CameraItem item)
+    {
+        EditingSlug = item.Slug;
+        DraftName = item.Name;
+        DraftCategory = item.Category;
+        DraftBrand = item.Brand;
+        DraftModel = item.Model;
+        DraftDescription = item.Description;
+        DraftAccessoriesText = string.Join(Environment.NewLine, item.Accessories);
+        DraftPrice = item.StartingPrice;
+        DraftDeposit = item.SecurityDeposit;
+        DraftStatus = item.Status;
+        DraftListed = IsListed(item.Slug);
+        SelectedImageNames.Clear();
+        EditorMessage = string.Empty;
+        EditorHasError = false;
+        EditorOpen = true;
+        PreviewingItem = null;
+    }
+
+    private void OnImagesSelected(InputFileChangeEventArgs args)
+    {
+        SelectedImageNames.Clear();
+        SelectedImageNames.AddRange(args.GetMultipleFiles().Select(file => file.Name));
+        EditorMessage = "Image files are selected locally only; this frontend preview does not upload them.";
+        EditorHasError = false;
+    }
+
+    private void SaveItem()
+    {
+        if (string.IsNullOrWhiteSpace(DraftName) || string.IsNullOrWhiteSpace(DraftBrand) || string.IsNullOrWhiteSpace(DraftModel) || DraftPrice < 0 || DraftDeposit < 0)
+        {
+            EditorMessage = "Enter an item name, brand, model, and non-negative price and deposit.";
+            EditorHasError = true;
+            return;
+        }
+
+        var current = EditingSlug is null ? null : PreviewItems.FirstOrDefault(item => item.Slug == EditingSlug);
+        var slug = current?.Slug ?? CreateSlug(DraftBrand, DraftModel);
+        var updated = new CameraItem
+        {
+            Id = current?.Id ?? $"preview-{Guid.NewGuid():N}",
+            Slug = slug,
+            Name = DraftName.Trim(),
+            Brand = DraftBrand.Trim(),
+            Model = DraftModel.Trim(),
+            Category = DraftCategory,
+            Description = DraftDescription.Trim(),
+            Status = DraftStatus,
+            StartingPrice = DraftPrice,
+            SecurityDeposit = DraftDeposit,
+            IsFeatured = current?.IsFeatured ?? false,
+            Images = current?.Images ?? [],
+            PricingTiers = [new("1 day", DraftPrice)],
+            Specifications = current?.Specifications ?? new Dictionary<string, string>(),
+            Features = current?.Features ?? [],
+            Accessories = DraftAccessoriesText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        };
+
+        if (current is null)
+        {
+            PreviewItems.Add(updated);
+            ListMessage = $"{DraftName.Trim()} was added to this page preview only.";
+        }
+        else
+        {
+            PreviewItems[PreviewItems.IndexOf(current)] = updated;
+            ListMessage = $"{DraftName.Trim()} preview changes are active for this page session only.";
+        }
+
+        ListedState[slug] = DraftListed;
+        EditorOpen = false;
+        PreviewingItem = null;
+        EditingSlug = null;
+        EditorMessage = string.Empty;
+    }
+
+    private void CancelEdit() { EditorOpen = false; EditingSlug = null; EditorMessage = string.Empty; }
+
+    private static string CreateSlug(string brand, string model) => string.Join('-', $"{brand}-{model}"
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        .ToLowerInvariant()
+        .Replace("/", "-")
+        .Replace("--", "-");
 }

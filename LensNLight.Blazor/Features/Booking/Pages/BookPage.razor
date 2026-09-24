@@ -2,6 +2,8 @@
 @page "/book/{Slug}"
 @inject ICameraCatalogService Catalog
 @inject NavigationManager Navigation
+@inject BookingPreviewState PreviewState
+@inject FrontendPreviewSettings PreviewSettings
 
 @{
     var step = CurrentStep;
@@ -46,15 +48,30 @@ else
                     {
                         <h2>Rental period</h2>
                         <div class="field-grid">
-                            <label>Start date<input type="date" @bind="StartDate" /></label>
-                            <label>End date<input type="date" @bind="EndDate" /></label>
-                            <label>Pickup time<select @bind="PickupTime"><option>10:00 AM</option><option>12:00 PM</option><option>2:00 PM</option></select></label>
+                            <label>Start date<input type="date" min="@Today" @bind="StartDate" @bind:after="SyncCalendarMonth" /></label>
+                            <label>End date<input type="date" min="@Today" @bind="EndDate" @bind:after="SyncCalendarMonth" /></label>
+                            <label>Pickup time<select @bind="PickupTime"><option>10:00 AM</option><option>12:00 PM</option><option>2:00 PM</option></select><small class="field-hint">Default booking buffer: @PreviewSettings.BookingBuffer</small></label>
                             <label>Return time<select @bind="ReturnTime"><option>10:00 AM</option><option>12:00 PM</option><option>2:00 PM</option></select></label>
                         </div>
                         <div class="calendar-mock" aria-label="Date selection preview">
-                            <div class="calendar-top"><button type="button" aria-label="Previous month">‹</button><strong>September 2026</strong><button type="button" aria-label="Next month">›</button></div>
-                            <div class="calendar-grid">@foreach (var day in new[] { "M", "T", "W", "T", "F", "S", "S" }) { <span class="dow">@day</span> }@foreach (var day in Enumerable.Range(1, 35)) { <span class="@(day == 24 ? "selected" : day < 24 ? "muted" : "")">@(day < 31 ? day.ToString() : "")</span> }</div>
+                            <div class="calendar-top"><button type="button" aria-label="Previous month" @onclick="PreviousMonth">‹</button><strong>@CalendarMonth.ToString("MMMM yyyy")</strong><button type="button" aria-label="Next month" @onclick="NextMonth">›</button></div>
+                            <div class="calendar-grid">
+                                @foreach (var day in new[] { "M", "T", "W", "T", "F", "S", "S" }) { <span class="dow">@day</span> }
+                                @foreach (var day in CalendarCells)
+                                {
+                                    if (day is DateTime date)
+                                    {
+                                        <button type="button" class="@CalendarDayClass(date)" disabled="@(date.Date < DateTime.Today)" aria-label="Select @date.ToString("MMMM d, yyyy")" aria-pressed="@(date.Date == StartDate.Date || date.Date == EndDate.Date)" @onclick="() => SelectDate(date)">@date.Day</button>
+                                    }
+                                    else
+                                    {
+                                        <span class="calendar-empty" aria-hidden="true"></span>
+                                    }
+                                }
+                            </div>
+                            <p class="calendar-help">@(ChoosingStartDate ? "Choose a start date." : "Now choose a return date.")</p>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(ValidationMessage)) { <p class="interaction-message error" role="alert">@ValidationMessage</p> }
                         <a class="primary-action full" href="@StepUrl("personal")" @onclick="GoToPersonal" @onclick:preventDefault>Continue to personal information <span aria-hidden="true">→</span></a>
                     }
                     else if (step == "personal")
@@ -67,14 +84,16 @@ else
                             <label>Facebook profile URL<input type="url" placeholder="https://facebook.com/" @bind="FacebookUrl" /></label>
                             <label class="wide">Complete address<textarea autocomplete="street-address" placeholder="House no., street, barangay, city" @bind="Address"></textarea></label>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(ValidationMessage)) { <p class="interaction-message error" role="alert">@ValidationMessage</p> }
                         <div class="flow-actions"><a class="secondary-action" href="@StepUrl("dates")" @onclick="GoToDates" @onclick:preventDefault>Back</a><a class="primary-action" href="@StepUrl("review")" @onclick="GoToReview" @onclick:preventDefault>Review booking →</a></div>
                     }
                     else
                     {
                         <h2>Booking summary</h2>
-                        <dl class="review-list"><div><dt>Renter</dt><dd>@Display(RenterName, "Your name")</dd></div><div><dt>Rental dates</dt><dd>@StartDate.ToString("MMMM d, yyyy") – @EndDate.ToString("MMMM d, yyyy")</dd></div><div><dt>Pickup &amp; return</dt><dd>@PickupTime · @ReturnTime</dd></div><div><dt>Contact</dt><dd>@Display(Email, "Email") · @Display(Phone, "Mobile")</dd></div><div><dt>Address</dt><dd>@Display(Address, "Not provided")</dd></div></dl>
-                        <label class="check-line"><input type="checkbox" /> I agree to the rental terms and conditions.</label>
-                        <div class="flow-actions"><a class="secondary-action" href="@StepUrl("personal")" @onclick="GoToPersonal" @onclick:preventDefault>Back</a><a class="primary-action" href="/payment/LNL-DEMO-001?item=@Uri.EscapeDataString(Slug)">Continue to payment →</a></div>
+                        <dl class="review-list"><div><dt>Renter</dt><dd>@Display(RenterName, "Your name")</dd></div><div><dt>Rental dates</dt><dd>@StartDate.ToString("MMMM d, yyyy") – @EndDate.ToString("MMMM d, yyyy")</dd></div><div><dt>Pickup &amp; return</dt><dd>@PickupTime · @ReturnTime</dd></div><div><dt>Contact</dt><dd>@Display(Email, "Email") · @Display(Phone, "Mobile")</dd></div><div><dt>Facebook profile</dt><dd>@Display(FacebookUrl, "Not provided")</dd></div><div><dt>Address</dt><dd>@Display(Address, "Not provided")</dd></div></dl>
+                        <label class="check-line"><input type="checkbox" @bind="TermsAccepted" /> I agree to the <a href="/terms" target="_blank" rel="noreferrer">rental terms and conditions</a>.</label>
+                        @if (!string.IsNullOrWhiteSpace(ValidationMessage)) { <p class="interaction-message error" role="alert">@ValidationMessage</p> }
+                        <div class="flow-actions"><a class="secondary-action" href="@StepUrl("personal")" @onclick="GoToPersonal" @onclick:preventDefault>Back</a><a class="primary-action" href="@PaymentUrl" @onclick="ProceedToPayment" @onclick:preventDefault>Continue to payment →</a></div>
                     }
                 </section>
 
@@ -93,8 +112,27 @@ else
 
 @code {
     [Parameter] public string Slug { get; set; } = "";
-    private DateTime StartDate { get; set; } = new(2026, 9, 24);
-    private DateTime EndDate { get; set; } = new(2026, 9, 26);
+    private DateTime StartDate { get; set; } = DateTime.Today.AddDays(1);
+    private DateTime EndDate { get; set; } = DateTime.Today.AddDays(3);
+    private DateTime CalendarMonth { get; set; } = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private bool ChoosingStartDate { get; set; } = true;
+    private bool TermsAccepted { get; set; }
+    private string ValidationMessage { get; set; } = string.Empty;
+    private string Today => DateTime.Today.ToString("yyyy-MM-dd");
+    private IReadOnlyList<DateTime?> CalendarCells
+    {
+        get
+        {
+            var firstDay = new DateTime(CalendarMonth.Year, CalendarMonth.Month, 1);
+            var leadingCells = ((int)firstDay.DayOfWeek + 6) % 7;
+            var totalCells = (int)Math.Ceiling((leadingCells + DateTime.DaysInMonth(firstDay.Year, firstDay.Month)) / 7d) * 7;
+            return Enumerable.Range(0, totalCells)
+                .Select(index => index < leadingCells || index >= leadingCells + DateTime.DaysInMonth(firstDay.Year, firstDay.Month)
+                    ? (DateTime?)null
+                    : firstDay.AddDays(index - leadingCells))
+                .ToArray();
+        }
+    }
     private string PickupTime { get; set; } = "10:00 AM";
     private string ReturnTime { get; set; } = "10:00 AM";
     private string RenterName { get; set; } = "";
@@ -102,6 +140,25 @@ else
     private string Phone { get; set; } = "";
     private string FacebookUrl { get; set; } = "";
     private string Address { get; set; } = "";
+
+    protected override void OnParametersSet()
+    {
+        PreviewState.BeginFor(Slug);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        if (query.TryGetValue("start", out var start) && DateTime.TryParse(start.ToString(), out var startDate)) PreviewState.StartDate = startDate.Date;
+        if (query.TryGetValue("end", out var end) && DateTime.TryParse(end.ToString(), out var endDate)) PreviewState.EndDate = endDate.Date;
+        StartDate = PreviewState.StartDate;
+        EndDate = PreviewState.EndDate;
+        CalendarMonth = new DateTime(StartDate.Year, StartDate.Month, 1);
+        PickupTime = PreviewState.PickupTime;
+        ReturnTime = PreviewState.ReturnTime;
+        RenterName = PreviewState.RenterName;
+        Email = PreviewState.Email;
+        Phone = PreviewState.Phone;
+        FacebookUrl = PreviewState.FacebookUrl;
+        Address = PreviewState.Address;
+        TermsAccepted = PreviewState.TermsAccepted;
+    }
 
     private string CurrentStep
     {
@@ -113,9 +170,101 @@ else
         }
     }
 
-    private string StepUrl(string step) => step == "dates" ? $"/book/{Slug}" : $"/book/{Slug}?step={step}";
-    private void GoToDates() => Navigation.NavigateTo(StepUrl("dates"));
-    private void GoToPersonal() => Navigation.NavigateTo(StepUrl("personal"));
-    private void GoToReview() => Navigation.NavigateTo(StepUrl("review"));
+    private string StepUrl(string step) => $"/book/{Uri.EscapeDataString(Slug)}?step={step}&start={StartDate:yyyy-MM-dd}&end={EndDate:yyyy-MM-dd}";
+    private string PaymentUrl => $"/payment/LNL-DEMO-001?item={Uri.EscapeDataString(Slug)}&days={RentalDays}&start={StartDate:yyyy-MM-dd}&end={EndDate:yyyy-MM-dd}";
+    private int RentalDays => Math.Max(1, (int)(EndDate.Date - StartDate.Date).TotalDays);
+    private void GoToDates() { CaptureDraft(); Navigation.NavigateTo(StepUrl("dates")); }
+    private void GoToPersonal()
+    {
+        if (StartDate.Date < DateTime.Today || RentalDays < PreviewSettings.MinimumRentalDays)
+        {
+            ValidationMessage = $"Choose a start date today or later and a return date at least {PreviewSettings.MinimumRentalDays} day(s) after pickup.";
+            return;
+        }
+
+        ValidationMessage = string.Empty;
+        CaptureDraft();
+        Navigation.NavigateTo(StepUrl("personal"));
+    }
+    private void GoToReview()
+    {
+        if (string.IsNullOrWhiteSpace(RenterName) || string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Phone) || string.IsNullOrWhiteSpace(Address))
+        {
+            ValidationMessage = "Please complete your name, email, mobile number, and address before continuing.";
+            return;
+        }
+
+        if (!System.Net.Mail.MailAddress.TryCreate(Email, out _))
+        {
+            ValidationMessage = "Enter a valid email address to continue.";
+            return;
+        }
+
+        ValidationMessage = string.Empty;
+        CaptureDraft();
+        Navigation.NavigateTo(StepUrl("review"));
+    }
+
+    private void ProceedToPayment()
+    {
+        if (!TermsAccepted)
+        {
+            ValidationMessage = "Please review and accept the rental terms before proceeding.";
+            return;
+        }
+
+        ValidationMessage = string.Empty;
+        CaptureDraft();
+        Navigation.NavigateTo(PaymentUrl);
+    }
+
+    private void CaptureDraft()
+    {
+        PreviewState.BeginFor(Slug);
+        PreviewState.StartDate = StartDate.Date;
+        PreviewState.EndDate = EndDate.Date;
+        PreviewState.PickupTime = PickupTime;
+        PreviewState.ReturnTime = ReturnTime;
+        PreviewState.RenterName = RenterName.Trim();
+        PreviewState.Email = Email.Trim();
+        PreviewState.Phone = Phone.Trim();
+        PreviewState.FacebookUrl = FacebookUrl.Trim();
+        PreviewState.Address = Address.Trim();
+        PreviewState.TermsAccepted = TermsAccepted;
+    }
+
+    private void SyncCalendarMonth() => CalendarMonth = new DateTime(StartDate.Year, StartDate.Month, 1);
+    private void PreviousMonth() => CalendarMonth = CalendarMonth.AddMonths(-1);
+    private void NextMonth() => CalendarMonth = CalendarMonth.AddMonths(1);
+
+    private void SelectDate(DateTime date)
+    {
+        ValidationMessage = string.Empty;
+        if (ChoosingStartDate)
+        {
+            StartDate = date.Date;
+            if (EndDate.Date <= StartDate.Date)
+            {
+                EndDate = StartDate.AddDays(1);
+            }
+        }
+        else if (date.Date > StartDate.Date)
+        {
+            EndDate = date.Date;
+        }
+        else
+        {
+            StartDate = date.Date;
+            EndDate = StartDate.AddDays(1);
+        }
+
+        ChoosingStartDate = !ChoosingStartDate;
+    }
+
+    private string CalendarDayClass(DateTime date)
+    {
+        if (date.Date == StartDate.Date || date.Date == EndDate.Date) return "selected";
+        return date.Date > StartDate.Date && date.Date < EndDate.Date ? "in-range" : string.Empty;
+    }
     private static string Display(string value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }

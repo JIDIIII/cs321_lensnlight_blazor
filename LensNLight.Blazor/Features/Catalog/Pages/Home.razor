@@ -2,6 +2,7 @@
 @page "/"
 @page "/cameras"
 @inject ICameraCatalogService Catalog
+@inject FrontendPreviewSettings PreviewSettings
 
 <PageTitle>LENS N' LIGHT Camera Rental</PageTitle>
 
@@ -83,7 +84,7 @@
 
     protected override void OnInitialized()
     {
-        Featured = Catalog.GetFeatured();
+        Featured = Catalog.GetBySlug(PreviewSettings.FeaturedItemSlug) ?? Catalog.GetFeatured();
         FilteredItems = Catalog.GetAll();
     }
 
