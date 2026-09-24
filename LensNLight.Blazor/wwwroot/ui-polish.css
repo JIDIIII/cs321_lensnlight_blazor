@@ -1,0 +1,236 @@
+/* Small interaction and motion refinements shared by every route. */
+:root {
+    --motion-fast: 160ms;
+    --motion-standard: 240ms;
+    --motion-enter: 520ms;
+    --ease-ui: cubic-bezier(0.2, 0.75, 0.25, 1);
+    --focus-ring: 0 0 0 3px rgba(216, 184, 102, 0.16);
+}
+
+button,
+input,
+select,
+textarea,
+.admin-panel,
+.flow-form-card,
+.flow-item,
+.booking-ref,
+.tracking-placeholder,
+.tracking-card,
+.stat-grid article,
+.payment-methods article {
+    transition:
+        color var(--motion-standard) ease,
+        background-color var(--motion-standard) ease,
+        border-color var(--motion-standard) ease,
+        box-shadow var(--motion-standard) var(--ease-ui),
+        transform var(--motion-standard) var(--ease-ui);
+}
+
+button:not(:disabled):active,
+.primary-action:active,
+.secondary-action:active,
+.book-action:active {
+    transform: translateY(1px) scale(0.99);
+}
+
+.primary-action svg,
+.card-cta svg {
+    transition: transform var(--motion-standard) var(--ease-ui);
+}
+
+.primary-action:hover svg,
+.primary-action:focus-visible svg,
+.camera-card:hover .card-cta svg,
+.camera-card:focus-within .card-cta svg {
+    transform: translateX(3px);
+}
+
+.site-nav a,
+.footer-links a,
+.table-action,
+.breadcrumbs a {
+    transition:
+        color var(--motion-fast) ease,
+        background-color var(--motion-fast) ease,
+        border-color var(--motion-fast) ease,
+        opacity var(--motion-fast) ease;
+}
+
+.site-nav a:hover,
+.footer-links a:hover,
+.table-action:hover,
+.breadcrumbs a:hover {
+    color: var(--color-gold-hover);
+}
+
+.admin-rail nav a,
+.admin-signout,
+.gallery-dots button,
+.calendar-top button,
+.admin-toolbar button,
+.method-row button {
+    transition:
+        color var(--motion-fast) ease,
+        background-color var(--motion-fast) ease,
+        border-color var(--motion-fast) ease,
+        box-shadow var(--motion-fast) ease,
+        transform var(--motion-fast) var(--ease-ui);
+}
+
+.gallery-dots button:hover,
+.calendar-top button:hover,
+.admin-toolbar button:hover,
+.method-row button:hover {
+    border-color: var(--color-gold);
+    color: var(--color-gold-hover);
+}
+
+.calendar-top button:active,
+.gallery-dots button:active {
+    transform: scale(0.92);
+}
+
+.field-grid input:focus,
+.field-grid select:focus,
+.field-grid textarea:focus,
+.portal-login-card input:focus,
+.settings-panel input:focus,
+.settings-panel select:focus,
+.settings-panel textarea:focus,
+.admin-toolbar input:focus,
+.admin-toolbar select:focus {
+    border-color: var(--color-gold);
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.admin-panel:hover,
+.flow-form-card:hover,
+.flow-item:hover,
+.tracking-placeholder:hover,
+.tracking-card:hover {
+    border-color: var(--color-border-strong);
+}
+
+.payment-methods article:hover,
+.stat-grid article:hover {
+    border-color: rgba(216, 184, 102, 0.34);
+    background-color: #1c1c1e;
+}
+
+.table-scroll {
+    overscroll-behavior-x: contain;
+    scrollbar-color: rgba(243, 237, 224, 0.28) transparent;
+    scrollbar-width: thin;
+}
+
+tbody tr {
+    transition: background-color var(--motion-fast) ease;
+}
+
+tbody tr:hover {
+    background: rgba(255, 250, 241, 0.035);
+}
+
+.booking-ref strong,
+.review-list dd,
+.tracking-card header > strong {
+    overflow-wrap: anywhere;
+}
+
+.customer-page > main,
+.admin-content,
+.portal-login-card {
+    animation: surface-arrive var(--motion-enter) var(--ease-ui) both;
+}
+
+.camera-card {
+    animation: card-arrive 460ms ease-out both;
+}
+
+.camera-card:nth-child(2) {
+    animation-delay: 45ms;
+}
+
+.camera-card:nth-child(3) {
+    animation-delay: 90ms;
+}
+
+.camera-card:nth-child(4) {
+    animation-delay: 135ms;
+}
+
+.camera-card:nth-child(5),
+.camera-card:nth-child(6) {
+    animation-delay: 180ms;
+}
+
+@keyframes surface-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(9px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes card-arrive {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 650px) {
+    .flow-steps li {
+        min-width: 0;
+    }
+
+    .flow-steps li span {
+        line-height: 1.2;
+    }
+
+    .panel-heading {
+        flex-wrap: wrap;
+    }
+
+    .panel-heading > div {
+        min-width: 0;
+    }
+
+    .admin-content > h1 {
+        overflow-wrap: anywhere;
+    }
+
+    .detail-rate {
+        min-width: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .camera-card:hover,
+    .camera-card:focus-within,
+    .featured-camera:hover,
+    .featured-camera:focus-visible,
+    .primary-action:active,
+    .secondary-action:active,
+    .book-action:active {
+        transform: none;
+    }
+}
