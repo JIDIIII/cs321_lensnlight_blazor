@@ -1,4 +1,4 @@
-namespace LensNLight.Blazor.Models;
+namespace LensNLight.Blazor.Features.Tracking.Models;
 
 public enum BookingStepState
 {

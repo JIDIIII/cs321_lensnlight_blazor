@@ -1,0 +1,28 @@
+<div class="admin-shell">
+    <aside class="admin-rail">
+        <a class="admin-logo" href="/admin/items"><img src="/images/branding/lens-n-light-header-logo.png" alt="LENS N' LIGHT" /></a>
+        <span class="admin-rail-caption">WORKSPACE</span>
+        <nav aria-label="Admin navigation">
+            <a class="@(Active == "items" ? "active" : "")" href="/admin/items"><span>▦</span>Items</a>
+            <a class="@(Active == "booking" ? "active" : "")" href="/admin/booking"><span>▣</span>Booking</a>
+            <a class="@(Active == "settings" ? "active" : "")" href="/admin/settings"><span>⚙</span>Settings</a>
+        </nav>
+        <a class="admin-signout" href="/admin/login">Sign out <span>JD</span></a>
+    </aside>
+    <main class="admin-main">
+        <header class="admin-topbar"><span>Workspace <i>/</i> @Title.ToUpperInvariant()</span><div><span class="admin-live"><i></i> Preview mode</span><span class="admin-avatar">JD</span></div></header>
+        <div class="admin-content">
+            <p class="eyebrow">OPERATIONS</p>
+            <h1>@Title</h1>
+            <p class="admin-description">@Description</p>
+            @ChildContent
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Active { get; set; } = "";
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Description { get; set; } = "";
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+}

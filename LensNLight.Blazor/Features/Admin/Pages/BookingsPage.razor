@@ -1,0 +1,46 @@
+@namespace LensNLight.Blazor.Features.Admin.Pages
+@page "/admin/booking"
+@inject NavigationManager Navigation
+
+@{
+    var create = Query("create") == "1";
+    var selected = Query("booking");
+}
+
+<PageTitle>Booking · Admin · LENS N' LIGHT</PageTitle>
+<AdminShell Active="booking" Title="Booking" Description="Manage reservations, payment review, and rental schedules.">
+    <div class="stat-grid">
+        <article><span>Total bookings</span><strong>24</strong><small>This month</small></article>
+        <article><span>Pending review</span><strong>03</strong><small>Needs attention</small></article>
+        <article><span>Active rentals</span><strong>08</strong><small>Currently out</small></article>
+        <article><span>Revenue this month</span><strong>₱86,450</strong><small>↑ 12.8% from last month</small></article>
+    </div>
+
+    @if (create)
+    {
+        <section class="admin-panel settings-panel"><div class="panel-heading"><div><span class="admin-eyebrow">MANUAL ENTRY</span><h2>Create booking</h2><p>This local screen is a visual preview only.</p></div><a class="table-action" href="/admin/booking">Close</a></div><div class="field-grid"><label>Customer name<input placeholder="Full name" /></label><label>Email<input type="email" placeholder="customer@example.com" /></label><label>Mobile number<input type="tel" placeholder="09XX XXX XXXX" /></label><label>Rental item<select><option>Canon EOS R50</option><option>Panasonic Lumix TZ99</option></select></label><label>Start date<input type="date" /></label><label>End date<input type="date" /></label></div><button class="admin-button gold" type="button">Save preview</button></section>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(selected))
+    {
+        <section class="admin-panel settings-panel"><div class="panel-heading"><div><span class="admin-eyebrow">BOOKING DETAILS</span><h2>@selected</h2><p>Jamie Santos · Canon EOS R50</p></div><span class="status-chip pending">Pending review</span></div><div class="review-list"><div><dt>Rental period</dt><dd>September 24–26, 2026</dd></div><div><dt>Pickup / return</dt><dd>10:00 AM / 10:00 AM</dd></div><div><dt>Payment proof</dt><dd>Awaiting review</dd></div><div><dt>Amount due</dt><dd>₱8,050.00</dd></div></div><div class="flow-actions"><a class="secondary-action" href="/admin/booking">Close details</a><button class="admin-button gold" type="button">Accept booking preview</button></div></section>
+    }
+
+    <section class="admin-panel">
+        <div class="panel-heading"><div><h2>Recent bookings</h2><p>Review reservations and open a booking to inspect details.</p></div><a class="admin-button gold" href="/admin/booking?create=1">+ Create booking</a></div>
+        <form class="admin-toolbar" method="get"><input name="search" placeholder="Search booking, customer, item" value="@Query("search")" /><select name="state"><option value="">All statuses</option><option>Pending</option><option>Booked</option><option>In use</option></select><button type="submit">Filter</button></form>
+        <div class="table-scroll"><table><thead><tr><th>BOOKING</th><th>CUSTOMER</th><th>ITEM</th><th>RENTAL PERIOD</th><th>AMOUNT</th><th>STATUS</th><th></th></tr></thead><tbody>
+            <tr><td><strong>LNL-DEMO-001</strong><small>Today, 9:42 AM</small></td><td>Jamie Santos</td><td>Panasonic Lumix TZ99</td><td>Sep 24 – 26</td><td>₱8,050</td><td><span class="status-chip pending">Pending</span></td><td><a class="table-action" href="/admin/booking?booking=LNL-DEMO-001">View</a></td></tr>
+            <tr><td><strong>LNL-2026-0923</strong><small>Yesterday, 2:18 PM</small></td><td>Mika Reyes</td><td>Canon EOS R50</td><td>Sep 23 – 25</td><td>₱5,400</td><td><span class="status-chip booked">Booked</span></td><td><a class="table-action" href="/admin/booking?booking=LNL-2026-0923">View</a></td></tr>
+            <tr><td><strong>LNL-2026-0922</strong><small>Sep 22, 2026</small></td><td>Paolo Cruz</td><td>Canon EOS R50</td><td>Sep 22 – 23</td><td>₱4,200</td><td><span class="status-chip in-use">In use</span></td><td><a class="table-action" href="/admin/booking?booking=LNL-2026-0922">View</a></td></tr>
+        </tbody></table></div>
+    </section>
+</AdminShell>
+
+@code {
+    private string? Query(string key)
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        return query.TryGetValue(key, out var value) ? value.ToString() : null;
+    }
+}

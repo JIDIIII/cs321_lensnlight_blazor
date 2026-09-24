@@ -1,3 +1,4 @@
+@namespace LensNLight.Blazor.Features.Catalog.Pages
 @page "/cameras/{Slug}"
 @page "/items/{Slug}"
 @inject ICameraCatalogService Catalog
@@ -89,14 +90,15 @@
                             <span>Security deposit</span>
                             <strong>₱@Item.SecurityDeposit.ToString("N0")</strong>
                         </div>
-                        <button class="book-action" type="button" disabled="@(Item.Status == CameraAvailability.Unavailable)" @onclick="ShowBookingNotice">
-                            @(Item.Status == CameraAvailability.Unavailable ? "Unavailable" : "Book Now")
-                        </button>
+                        @if (Item.Status == CameraAvailability.Unavailable)
+                        {
+                            <button class="book-action" type="button" disabled>Unavailable</button>
+                        }
+                        else
+                        {
+                            <a class="book-action" href="/book/@Item.Slug">Book Now <span aria-hidden="true">→</span></a>
+                        }
                     </footer>
-                    @if (ShowPrototypeNotice)
-                    {
-                        <p class="prototype-notice" role="status">Booking submission is intentionally deferred to a later migration phase.</p>
-                    }
                 </div>
             </article>
         }
@@ -109,13 +111,8 @@
     public string Slug { get; set; } = string.Empty;
 
     private CameraItem? Item { get; set; }
-    private bool ShowPrototypeNotice { get; set; }
-
     protected override void OnParametersSet()
     {
         Item = Catalog.GetBySlug(Slug);
-        ShowPrototypeNotice = false;
     }
-
-    private void ShowBookingNotice() => ShowPrototypeNotice = true;
 }

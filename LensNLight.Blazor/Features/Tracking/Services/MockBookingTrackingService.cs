@@ -1,6 +1,6 @@
-using LensNLight.Blazor.Models;
+using LensNLight.Blazor.Features.Tracking.Models;
 
-namespace LensNLight.Blazor.Services;
+namespace LensNLight.Blazor.Features.Tracking.Services;
 
 public sealed class MockBookingTrackingService : IBookingTrackingService
 {

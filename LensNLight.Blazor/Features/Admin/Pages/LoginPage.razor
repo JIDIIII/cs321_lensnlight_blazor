@@ -1,0 +1,15 @@
+@namespace LensNLight.Blazor.Features.Admin.Pages
+@page "/admin/login"
+
+<PageTitle>Admin sign in · LENS N' LIGHT</PageTitle>
+<main class="portal-login">
+    <form class="portal-login-card" @onsubmit:preventDefault>
+        <img src="/images/branding/lens-n-light-logo-front.png" alt="LENS N' LIGHT" />
+        <span class="portal-kicker">ADMIN PORTAL</span>
+        <h1>Sign in</h1>
+        <label>Email<input type="email" autocomplete="username" placeholder="admin@example.com" /></label>
+        <label>Password<input type="password" autocomplete="current-password" placeholder="Password" /></label>
+        <a class="primary-action" href="/admin/items">Continue to admin preview</a>
+        <p class="payment-demo-note">Frontend preview only · Sign-in is not connected to an account.</p>
+    </form>
+</main>

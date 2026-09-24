@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository is an independent C# and ASP.NET Core Blazor reimplementation of selected customer-facing LENS N' LIGHT screens. The original Next.js application at `/Users/johndavidvelos/Documents/LENS N' LIGHT` was used only as read-only visual and structural reference material and was not modified by this work.
+This repository is an independent C# and ASP.NET Core Blazor frontend reimplementation of the LENS N' LIGHT site. The original Next.js application at `/Users/johndavidvelos/Documents/LENS N' LIGHT` was used only as read-only visual and structural reference material and was not modified by this work.
 
 ## Requirements
 
@@ -35,24 +35,30 @@ The development profile serves the application at `http://localhost:5190` by def
 - `/cameras` — alternate catalog entry route
 - `/cameras/{slug}` — camera details and local image gallery
 - `/items/{slug}` — compatibility alias for the current Next.js item route shape
+- `/book/{slug}` — date selection, renter details, and booking review
+- `/payment/{bookingNumber}` — local payment instructions and confirmation preview
 - `/track-booking` — mock booking lookup and status tracker
 - `/track` — compatibility alias for the current Next.js tracking route
+- `/privacy` and `/terms` — customer legal pages
+- `/admin/login`, `/admin/items`, `/admin/booking`, `/admin/settings` — admin frontend previews
+- `/admin` — opens the admin item inventory
 
 Sample camera route: `/cameras/panasonic-lumix-tz99`
 
 ## Current Scope
 
-- Homepage
-- Camera/item details
-- Track Booking
+- Customer catalog and camera details
+- Booking dates, personal information, review, payment, and tracking flow
+- Privacy and terms pages
+- Admin login, inventory, bookings, and settings views
 - Responsive layouts for mobile, tablet, laptop, and desktop
 - Friendly camera-not-found, booking-not-found, missing-image, and empty-search states
 
 ## Mock Functionality
 
-Camera catalog details and booking tracking are supplied by local singleton services in `Services/`. No Supabase, Google Drive, payment provider, authentication, email, or notification service is called.
+The camera catalog and tracking demo use local mock services. Booking, payment, and admin actions are presentation-only: no booking is created, files are uploaded, or inventory/settings are saved. No Supabase, Google Drive, payment provider, authentication, email, or notification service is called.
 
-Use `LNL-DEMO-001` on the Track Booking page to display the mock booking result. The Book Now control intentionally shows a prototype notice and does not create a booking.
+Use `LNL-DEMO-001` on the Track Booking page to display the mock booking result. The booking-to-payment flow uses this same demo reference so the tracking link works end to end.
 
 ## Assets
 
@@ -66,14 +72,15 @@ The copied set contains the public customer logo, homepage studio background, an
 
 ## Architecture
 
-- `Components/Navigation/` — site header and footer
-- `Components/Cameras/` — camera cards, featured camera, status badge, and image gallery
-- `Components/Booking/` — booking status tracker
-- `Components/Pages/` — routable Blazor screens
-- `Models/` — camera, pricing, image, and tracking models
-- `Services/` — local catalog and booking tracking service abstractions
+- `Features/Catalog/` — catalog pages, camera components, models, and mock catalog service
+- `Features/Booking/` — booking flow screens
+- `Features/Payments/` — payment preview screens
+- `Features/Tracking/` — tracking page, timeline component, model, and mock tracking service
+- `Features/Admin/` — admin pages and the shared admin shell
+- `Features/Legal/` — privacy and terms pages
+- `Components/Navigation/` and `Components/Layout/` — shared site shell and app layout
 - `wwwroot/` — CSS and public visual assets
 
 ## Future Migration
 
-Logical next phases are the booking date/time flow, customer validation, payment submission, authenticated administration, database-backed catalog and availability, private upload handling, and server-side notification delivery. Those integrations should be migrated separately, with their current security and business contracts preserved.
+Backend integrations can be added feature by feature while preserving the current frontend boundaries. Keep real booking availability, server-side pricing, payment verification, authentication, private uploads, and notification delivery out of this presentation-only prototype until separately requested.

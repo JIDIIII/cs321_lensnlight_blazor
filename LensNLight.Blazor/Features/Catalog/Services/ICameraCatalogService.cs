@@ -1,6 +1,6 @@
-using LensNLight.Blazor.Models;
+using LensNLight.Blazor.Features.Catalog.Models;
 
-namespace LensNLight.Blazor.Services;
+namespace LensNLight.Blazor.Features.Catalog.Services;
 
 public interface ICameraCatalogService
 {

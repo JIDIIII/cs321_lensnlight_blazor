@@ -1,0 +1,41 @@
+@namespace LensNLight.Blazor.Features.Legal.Pages
+@page "/privacy"
+@page "/terms"
+@inject NavigationManager Navigation
+
+@{
+    var privacy = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.EndsWith("/privacy", StringComparison.OrdinalIgnoreCase);
+    var title = privacy ? "Privacy Policy" : "Terms of Service";
+}
+
+<PageTitle>@title · LENS N' LIGHT</PageTitle>
+<div class="customer-page">
+    <SiteHeader />
+    <main class="legal-layout">
+        <p class="eyebrow">LENS N' LIGHT CAMERA RENTAL</p>
+        <h1>@title</h1>
+        <p class="legal-updated">Last updated September 2026</p>
+        <article class="legal-paper">
+            @if (privacy)
+            {
+                <h2>Your privacy matters</h2><p>This policy explains how LENS N' LIGHT collects, uses, and safeguards the information you choose to provide when browsing our catalog or requesting a rental.</p>
+                <h2>Information we collect</h2><p>Booking requests may include your name, email address, mobile number, address, rental period, and payment reference details.</p>
+                <h2>How information is used</h2><p>Information is used to coordinate rental requests, communicate with customers, confirm pickup or delivery arrangements, and provide support.</p>
+                <h2>Storage and protection</h2><p>Information should be accessed only by authorized personnel and retained only as needed for rental operations and applicable recordkeeping.</p>
+                <h2>Your choices</h2><p>You may contact LENS N' LIGHT to ask about the information associated with your rental request or to request a correction.</p>
+            }
+            else
+            {
+                <h2>Rental terms and conditions</h2><p>These terms describe the expectations for requesting, collecting, using, and returning equipment rented from LENS N' LIGHT.</p>
+                <h2>Booking requests and availability</h2><p>A booking request is subject to availability review. A request is not confirmed until the booking details and payment have been reviewed.</p>
+                <h2>Payment and security deposit</h2><p>Payment instructions and any security deposit are shown during checkout. Keep payment references until your rental is complete.</p>
+                <h2>Equipment care</h2><p>Use the equipment responsibly, keep it protected, and return it with the accessories listed in the item details.</p>
+                <h2>Pickup, delivery, and return</h2><p>Customers should follow the agreed collection and return schedule and contact LENS N' LIGHT promptly if plans change.</p>
+                <h2>Questions</h2><p>Contact LENS N' LIGHT through the customer support channels provided with your booking.</p>
+            }
+            <a class="secondary-action" href="/">← Return to home</a>
+            <span class="legal-switch"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></span>
+        </article>
+    </main>
+    <SiteFooter />
+</div>

@@ -1,0 +1,121 @@
+@namespace LensNLight.Blazor.Features.Booking.Pages
+@page "/book/{Slug}"
+@inject ICameraCatalogService Catalog
+@inject NavigationManager Navigation
+
+@{
+    var step = CurrentStep;
+    var item = Catalog.GetBySlug(Slug);
+}
+
+<PageTitle>Book a camera | LENS N' LIGHT</PageTitle>
+
+@if (item is null)
+{
+    <div class="customer-page">
+        <SiteHeader />
+        <main class="legal-layout">
+            <p class="eyebrow">RESERVATION</p>
+            <h1>Camera not found</h1>
+            <p>Choose a camera from the current collection to start a booking.</p>
+            <a class="primary-action" href="/#rental-catalog">Browse cameras</a>
+        </main>
+        <SiteFooter />
+    </div>
+}
+else
+{
+    <div class="customer-page">
+        <SiteHeader />
+        <main class="flow-frame">
+            <ol class="flow-steps" aria-label="Booking progress">
+                <li class="@(step == "dates" ? "current" : "done")"><b>01</b><span>Dates</span></li>
+                <li class="@(step == "personal" ? "current" : step == "review" ? "done" : "")"><b>02</b><span>Personal info</span></li>
+                <li class="@(step == "review" ? "current" : "")"><b>03</b><span>Review</span></li>
+            </ol>
+
+            <header class="flow-heading">
+                <p class="eyebrow">@(step == "dates" ? "RESERVATION" : step == "personal" ? "YOUR DETAILS" : "ALMOST THERE")</p>
+                <h1>@(step == "dates" ? "Select Your Dates" : step == "personal" ? "Personal Information" : "Review & Confirm")</h1>
+                <p>@(step == "dates" ? "Choose your rental dates and preferred pickup times." : step == "personal" ? "Provide the required details to complete your profile." : "Please double-check your booking information before proceeding to payment.")</p>
+            </header>
+
+            <div class="flow-grid">
+                <section class="flow-form-card">
+                    @if (step == "dates")
+                    {
+                        <h2>Rental period</h2>
+                        <div class="field-grid">
+                            <label>Start date<input type="date" @bind="StartDate" /></label>
+                            <label>End date<input type="date" @bind="EndDate" /></label>
+                            <label>Pickup time<select @bind="PickupTime"><option>10:00 AM</option><option>12:00 PM</option><option>2:00 PM</option></select></label>
+                            <label>Return time<select @bind="ReturnTime"><option>10:00 AM</option><option>12:00 PM</option><option>2:00 PM</option></select></label>
+                        </div>
+                        <div class="calendar-mock" aria-label="Date selection preview">
+                            <div class="calendar-top"><button type="button" aria-label="Previous month">‹</button><strong>September 2026</strong><button type="button" aria-label="Next month">›</button></div>
+                            <div class="calendar-grid">@foreach (var day in new[] { "M", "T", "W", "T", "F", "S", "S" }) { <span class="dow">@day</span> }@foreach (var day in Enumerable.Range(1, 35)) { <span class="@(day == 24 ? "selected" : day < 24 ? "muted" : "")">@(day < 31 ? day.ToString() : "")</span> }</div>
+                        </div>
+                        <a class="primary-action full" href="@StepUrl("personal")" @onclick="GoToPersonal" @onclick:preventDefault>Continue to personal information <span aria-hidden="true">→</span></a>
+                    }
+                    else if (step == "personal")
+                    {
+                        <h2>Contact information</h2>
+                        <div class="field-grid">
+                            <label>Full name<input autocomplete="name" placeholder="Your full name" @bind="RenterName" /></label>
+                            <label>Email address<input autocomplete="email" type="email" placeholder="you@example.com" @bind="Email" /></label>
+                            <label>Mobile number<input autocomplete="tel" type="tel" placeholder="09XX XXX XXXX" @bind="Phone" /></label>
+                            <label>Facebook profile URL<input type="url" placeholder="https://facebook.com/" @bind="FacebookUrl" /></label>
+                            <label class="wide">Complete address<textarea autocomplete="street-address" placeholder="House no., street, barangay, city" @bind="Address"></textarea></label>
+                        </div>
+                        <div class="flow-actions"><a class="secondary-action" href="@StepUrl("dates")" @onclick="GoToDates" @onclick:preventDefault>Back</a><a class="primary-action" href="@StepUrl("review")" @onclick="GoToReview" @onclick:preventDefault>Review booking →</a></div>
+                    }
+                    else
+                    {
+                        <h2>Booking summary</h2>
+                        <dl class="review-list"><div><dt>Renter</dt><dd>@Display(RenterName, "Your name")</dd></div><div><dt>Rental dates</dt><dd>@StartDate.ToString("MMMM d, yyyy") – @EndDate.ToString("MMMM d, yyyy")</dd></div><div><dt>Pickup &amp; return</dt><dd>@PickupTime · @ReturnTime</dd></div><div><dt>Contact</dt><dd>@Display(Email, "Email") · @Display(Phone, "Mobile")</dd></div><div><dt>Address</dt><dd>@Display(Address, "Not provided")</dd></div></dl>
+                        <label class="check-line"><input type="checkbox" /> I agree to the rental terms and conditions.</label>
+                        <div class="flow-actions"><a class="secondary-action" href="@StepUrl("personal")" @onclick="GoToPersonal" @onclick:preventDefault>Back</a><a class="primary-action" href="/payment/LNL-DEMO-001?item=@Uri.EscapeDataString(Slug)">Continue to payment →</a></div>
+                    }
+                </section>
+
+                <aside class="flow-item">
+                    <img src="@(item.Images.FirstOrDefault()?.Url ?? "/images/cameras/canon-eos-r50-1.webp")" alt="@item.Name" />
+                    <div><span class="eyebrow">@item.Category.ToUpperInvariant()</span><h2>@item.Name</h2><p>@foreach (var tier in item.PricingTiers) { <span>@tier.Label <strong>₱@tier.DailyRate.ToString("N0")/day</strong><br /></span> }</p><span class="availability-pill">@item.Status</span></div>
+                    <h3>Included in your rental</h3>
+                    <ul>@foreach (var inclusion in item.Accessories) { <li>@inclusion</li> }</ul>
+                    <div class="flow-total"><span>Security deposit</span><strong>₱@item.SecurityDeposit.ToString("N0")</strong></div>
+                </aside>
+            </div>
+        </main>
+        <SiteFooter />
+    </div>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+    private DateTime StartDate { get; set; } = new(2026, 9, 24);
+    private DateTime EndDate { get; set; } = new(2026, 9, 26);
+    private string PickupTime { get; set; } = "10:00 AM";
+    private string ReturnTime { get; set; } = "10:00 AM";
+    private string RenterName { get; set; } = "";
+    private string Email { get; set; } = "";
+    private string Phone { get; set; } = "";
+    private string FacebookUrl { get; set; } = "";
+    private string Address { get; set; } = "";
+
+    private string CurrentStep
+    {
+        get
+        {
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+            var requested = query.TryGetValue("step", out var value) ? value.ToString() : "dates";
+            return requested is "personal" or "review" ? requested : "dates";
+        }
+    }
+
+    private string StepUrl(string step) => step == "dates" ? $"/book/{Slug}" : $"/book/{Slug}?step={step}";
+    private void GoToDates() => Navigation.NavigateTo(StepUrl("dates"));
+    private void GoToPersonal() => Navigation.NavigateTo(StepUrl("personal"));
+    private void GoToReview() => Navigation.NavigateTo(StepUrl("review"));
+    private static string Display(string value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
+}

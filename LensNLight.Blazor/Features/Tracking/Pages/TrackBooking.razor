@@ -1,6 +1,8 @@
+@namespace LensNLight.Blazor.Features.Tracking.Pages
 @page "/track-booking"
 @page "/track"
 @inject IBookingTrackingService TrackingService
+@inject NavigationManager Navigation
 
 <PageTitle>Track Booking | LENS N' LIGHT</PageTitle>
 
@@ -64,6 +66,16 @@
     private string BookingNumber { get; set; } = string.Empty;
     private bool LookupAttempted { get; set; }
     private BookingTrackingResult? Result { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        if (query.TryGetValue("booking", out var booking) && !string.IsNullOrWhiteSpace(booking))
+        {
+            BookingNumber = booking.ToString();
+            ExecuteLookup();
+        }
+    }
 
     private void ExecuteLookup()
     {

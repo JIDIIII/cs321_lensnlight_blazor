@@ -1,4 +1,4 @@
-namespace LensNLight.Blazor.Models;
+namespace LensNLight.Blazor.Features.Catalog.Models;
 
 public enum CameraAvailability
 {

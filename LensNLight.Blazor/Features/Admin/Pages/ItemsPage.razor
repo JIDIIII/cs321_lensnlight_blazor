@@ -1,0 +1,46 @@
+@namespace LensNLight.Blazor.Features.Admin.Pages
+@page "/admin"
+@page "/admin/items"
+@inject ICameraCatalogService Catalog
+@inject NavigationManager Navigation
+
+@{
+    var isCreating = Query("create") == "1";
+    var editSlug = Query("edit");
+    var editing = string.IsNullOrWhiteSpace(editSlug) ? null : Catalog.GetBySlug(editSlug);
+}
+
+<PageTitle>Items · Admin · LENS N' LIGHT</PageTitle>
+<AdminShell Active="items" Title="Items" Description="Manage rental inventory, pricing, availability, and item details.">
+            <section class="admin-panel">
+                <div class="panel-heading"><div><h2>Item inventory</h2><p>Public catalog and rental configuration.</p></div><a class="admin-button gold" href="/admin/items?create=1">+ Add item</a></div>
+                @if (!string.IsNullOrWhiteSpace(editSlug) && editing is null)
+                {
+                    <p class="payment-demo-note">That item is not in the local preview catalog.</p>
+                }
+                <div class="admin-toolbar"><input placeholder="Search items by name or category" /><button type="button">Search</button></div>
+                <div class="table-scroll"><table><thead><tr><th>ITEM</th><th>CATEGORY</th><th>STATUS</th><th>DAILY RATE</th><th>DEPOSIT</th><th>VISIBILITY</th><th>ACTIONS</th></tr></thead><tbody>
+                    @foreach (var camera in Catalog.GetAll())
+                    {
+                        <tr><td><div class="item-cell"><img src="@camera.Images.FirstOrDefault()?.Url" alt="" /><span><strong>@camera.Name</strong><small>@camera.Slug</small></span></div></td><td>@camera.Category</td><td><span class="status-chip active">@camera.Status</span></td><td>₱@camera.StartingPrice.ToString("N0")</td><td>₱@camera.SecurityDeposit.ToString("N0")</td><td><span class="status-chip active">Listed</span></td><td><a class="table-action" href="/admin/items?edit=@camera.Slug">Edit</a><span aria-hidden="true"> · </span><a class="table-action" href="/items/@camera.Slug">Preview</a></td></tr>
+                    }
+                </tbody></table></div>
+            </section>
+            @if (isCreating || editing is not null)
+            {
+                <section class="admin-panel settings-panel" aria-label="@(isCreating ? "Add item" : "Edit item")">
+                    <div class="panel-heading"><div><span class="admin-eyebrow">@(isCreating ? "NEW INVENTORY" : "INVENTORY EDITOR")</span><h2>@(isCreating ? "Add item" : $"Edit {editing!.Name}")</h2></div><a class="table-action" href="/admin/items">Close</a></div>
+                    <p class="muted-copy">Frontend preview only. Saving does not change inventory or availability.</p>
+                    <div class="field-grid"><label>Item name<input value="@(editing?.Name ?? "")" placeholder="Camera or accessory name" /></label><label>Category<select><option>Camera</option><option>Lens</option><option>Accessories</option></select></label><label>Brand<input value="@(editing?.Brand ?? "")" placeholder="Brand" /></label><label>Model<input value="@(editing?.Model ?? "")" placeholder="Model" /></label><label>One-day rate<input type="number" value="@(editing?.StartingPrice ?? 0)" /></label><label>Security deposit<input type="number" value="@(editing?.SecurityDeposit ?? 0)" /></label><label>Item status<select><option>Available</option><option>Maintenance</option><option>Unavailable</option></select></label><label>Visibility<select><option>Listed</option><option>Archived</option></select></label><label class="wide">Description<textarea rows="4" placeholder="Describe this rental item">@editing?.Description</textarea></label><label class="wide">Upload item images<input type="file" accept="image/*" multiple /></label><label class="wide">Included accessories<textarea rows="3" placeholder="One item per line">@string.Join(Environment.NewLine, editing?.Accessories ?? Array.Empty<string>())</textarea></label></div>
+                    <div class="flow-actions"><a class="secondary-action" href="/admin/items">Cancel</a><button class="admin-button gold" type="button">Save preview</button></div>
+                </section>
+            }
+</AdminShell>
+
+@code {
+    private string? Query(string key)
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+        return query.TryGetValue(key, out var value) ? value.ToString() : null;
+    }
+}

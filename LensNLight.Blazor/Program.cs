@@ -1,5 +1,6 @@
 using LensNLight.Blazor.Components;
-using LensNLight.Blazor.Services;
+using LensNLight.Blazor.Features.Catalog.Services;
+using LensNLight.Blazor.Features.Tracking.Services;
 using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);

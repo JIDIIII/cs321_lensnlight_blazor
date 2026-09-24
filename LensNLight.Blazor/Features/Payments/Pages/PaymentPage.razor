@@ -1,0 +1,83 @@
+@namespace LensNLight.Blazor.Features.Payments.Pages
+@page "/payment/{BookingNumber}"
+@inject NavigationManager Navigation
+
+@{
+    var submitted = PaymentSubmitted;
+}
+
+<PageTitle>Payment | LENS N' LIGHT</PageTitle>
+<div class="customer-page">
+    <SiteHeader />
+    <main class="flow-frame payment-layout">
+        @if (submitted)
+        {
+            <section class="payment-result-card">
+                <span class="payment-success-mark" aria-hidden="true">✓</span>
+                <p class="eyebrow">PAYMENT UPDATE</p>
+                <h1>Payment proof submitted</h1>
+                <p>This is a frontend preview. Your demo booking is ready to view in booking tracking.</p>
+                <span class="payment-ref-label">BOOKING NUMBER</span>
+                <strong class="booking-number-display">@BookingNumber</strong>
+                <a class="primary-action" href="/track?booking=@Uri.EscapeDataString(BookingNumber)">Track booking <span aria-hidden="true">→</span></a>
+            </section>
+        }
+        else
+        {
+            <header class="flow-heading">
+                <p class="eyebrow">SECURE CHECKOUT</p>
+                <h1>Payment</h1>
+                <p>Review the payment instructions and add a proof preview. No payment will be processed or uploaded.</p>
+            </header>
+            <div class="booking-ref"><span>BOOKING NUMBER</span><strong>@BookingNumber</strong><a href="/track?booking=@Uri.EscapeDataString(BookingNumber)">Track booking →</a></div>
+            <div class="flow-grid">
+                <section class="flow-form-card">
+                    <h2>Payment instructions</h2>
+                    <p class="muted-copy">Choose a payment method and enter the reference details for this local preview.</p>
+                    <div class="payment-methods">
+                        <article><span>GCash</span><strong>0917 123 4567</strong><small>LENS N' LIGHT Camera Rental</small></article>
+                        <article><span>Bank transfer</span><strong>BDO · 0123 456 789</strong><small>LENS N' LIGHT Camera Rental</small></article>
+                    </div>
+                    <div class="field-grid">
+                        <label>Payment method<select><option>GCash</option><option>Bank transfer</option></select></label>
+                        <label>Reference number<input placeholder="Enter transaction reference" /></label>
+                        <label class="wide">Proof of payment<input type="file" accept="image/*,.pdf" /></label>
+                    </div>
+                    <p class="payment-demo-note">Demo only · Selecting a file does not upload it or submit a real payment.</p>
+                    <a class="primary-action full" href="/payment/@Uri.EscapeDataString(BookingNumber)?state=submitted">Submit payment proof</a>
+                </section>
+                <aside class="flow-item payment-summary">
+                    <h2>Payment summary</h2>
+                    <dl class="review-list"><div><dt>Camera rental · 2 days</dt><dd>₱2,800.00</dd></div><div><dt>Security deposit</dt><dd>₱5,000.00</dd></div><div><dt>Pickup</dt><dd>₱0.00</dd></div></dl>
+                    <div class="flow-total"><span>Total due</span><strong>₱7,800.00</strong></div>
+                    <p>Payment deadline<br /><strong>Within 24 hours of booking</strong></p>
+                    <a class="secondary-action" href="@BookingReviewUrl">← Back to booking review</a>
+                </aside>
+            </div>
+        }
+    </main>
+    <SiteFooter />
+</div>
+
+@code {
+    [Parameter] public string BookingNumber { get; set; } = "";
+
+    private string BookingReviewUrl
+    {
+        get
+        {
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+            var itemSlug = query.TryGetValue("item", out var value) ? value.ToString() : "panasonic-lumix-tz99";
+            return $"/book/{Uri.EscapeDataString(itemSlug)}?step=review";
+        }
+    }
+
+    private bool PaymentSubmitted
+    {
+        get
+        {
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+            return query.TryGetValue("state", out var state) && state == "submitted";
+        }
+    }
+}
