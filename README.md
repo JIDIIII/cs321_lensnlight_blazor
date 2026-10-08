@@ -80,6 +80,7 @@ The copied set contains the public customer logo, homepage studio background, an
 - `Features/Legal/` — privacy and terms pages
 - `Components/Navigation/` and `Components/Layout/` — shared site shell and app layout
 - `wwwroot/` — CSS and public visual assets
+- [Current-state class diagram](docs/current-class-diagram.md) — Mermaid view of the models, preview state, services, and their consumers
 
 ## Future Migration
 
